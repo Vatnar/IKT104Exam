@@ -1,0 +1,3 @@
+[submodule "Exam/COMPONENT_ism43362"]
+	path = Exam/COMPONENT_ism43362
+	url = https://github.com/ARMmbed/wifi-ism43362
