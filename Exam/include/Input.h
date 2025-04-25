@@ -15,10 +15,10 @@ class Input{
 
 
     osThreadId_t m_programThreadId;
-    InterruptIn m_left;   
-    InterruptIn m_up;
-    InterruptIn m_down;
-    InterruptIn m_right;
+    DigitalIn m_left;   
+    DigitalIn m_up;
+    DigitalIn m_down;
+    DigitalIn m_right;
 
 };
 #endif
