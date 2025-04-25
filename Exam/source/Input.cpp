@@ -11,17 +11,24 @@ void Input::Init(osThreadId_t programThreadId){
 void Input::InputLoop(){
     while (true) {
         if (!m_left.read()) {
+            printf("\n INPUT: LEFT\n");
             osThreadFlagsSet(m_programThreadId, uint32_t(ButtonState::LEFT));
+            ThisThread::sleep_for(100ms); 
         }
         if (!m_up.read()) {
+            printf("\n INPUT: UP\n");
             osThreadFlagsSet(m_programThreadId, uint32_t(ButtonState::UP));
+            ThisThread::sleep_for(100ms); 
         }
         if (!m_down.read()) {
+            printf("\n INPUT: DOWN\n");
             osThreadFlagsSet(m_programThreadId, uint32_t(ButtonState::DOWN));
+            ThisThread::sleep_for(100ms); 
         }
         if (!m_right.read()) {
+            printf("\n INPUT: RIGHT\n");
             osThreadFlagsSet(m_programThreadId, uint32_t(ButtonState::RIGHT));
+            ThisThread::sleep_for(100ms); 
         }
-        ThisThread::sleep_for(100ms); 
     }
 }
