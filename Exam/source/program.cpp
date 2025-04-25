@@ -1,4 +1,5 @@
-#include "program.h"
+#include "Program.h"
+#include <mbed.h>
 #include <stdio.h>
 
 Program::Program(){
@@ -16,19 +17,28 @@ Program::Program(){
         m_api.doStartupStuff(&m_apiargs);
     }));
 
-    // Initialiserer displayet
+
+    // init DISPLAY
     m_displayThread.start(callback(&m_display, &Display::Init));
+
+
+    // Init INPUT
+    m_inputThread.start([this]() {
+    m_input.Init(ThisThread::get_id());
+    }); 
     
     // Venter til threadsene er ferdige
     m_displayThread.join();
     m_apiThread.join();
-
+    m_inputThread.join();
+    
     // Setter staten til startup og starter eventloopen til displayet.
     // Hvilke events som skal bli kjørt blir sendt fortløpende inn med thread flags og mailbox
     m_displayThread.start(callback(&m_display, &Display::EventLoop));
-    
     m_state = State::STARTUP;
     m_displayThread.flags_set((uint32_t)m_state);
+
+    
 
     printf("Program constructed\n");
 }

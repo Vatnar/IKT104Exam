@@ -1,4 +1,7 @@
-#include <mbed-os/mbed.h>
+#ifndef PROGRAM_H
+#define PROGRAM_H
+#include <mbed.h>
+#include "Input.h"
 #define DEMO 1
 
 enum class State {
@@ -38,4 +41,8 @@ class Program {
     API m_api;
     Thread m_apiThread;
 
+    Input m_input;
+    Thread m_inputThread;
+
 };
+#endif
