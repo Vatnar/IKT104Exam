@@ -1,41 +1,38 @@
 #include "mbed-os/mbed.h"
 #include "DFRobot_RGBLCD1602/DFRobot_RGBLCD1602.h"
 #include "display.h"
+#include "States.h"
 
-#define STARTUP = 1
-#define DATETIME = 2
-#define TEMPHUMID = 3
-#define WEATHER = 4
-#define NEWS = 5
-#define ALARM = 6
-#define EDITHOUR = 7
-#define EDITMINUTE = 8
-#define SETLOCATION = 9
+void Display::Init() {
+    I2C lcdI2C(D14, D15); 
+    DFRobot_RGBLCD1602 lcd(&lcdI2C); 
+
+    thread_sleep_for(80);               // Trenger sleep for å initialisere LCD-displayet
+    lcd.clear();
+    lcd.display();
+}
 
 void Display::EventLoop() {
-    State state;
+    State state;                // Instansierer State-klassen
 
     while (true) {
+        #define ANY 0xFFFFFFFF
+        state = (State)ThisThread::flags_wait_any(ANY, false);      // Dette vil vente til en state er sendt, og behandle den
         
+        switch (state) {
+            case State::STARTUP:        m_displayStartup();     break;
+            case State::SHOWALARM:      m_displayAlarm();       break;
+            case State::DATETIME:       m_displayDateTime();    break;
+            case State::TEMPHUMID:      m_displayTempHum();     break;
+            case State::WEATHER:        m_displayWeather();     break;
+            case State::NEWS:           m_displayNews();        break;
+            case State::EDITHOUR:       m_editHour();           break;
+            case State::EDITMINUTE:     m_editMinute();         break;
+            case State::SETLOC:         m_setLocation();        break;
+        }
     }
 }
 
-void updateDisplay()
-{
-    switch (state) {
-    case STARTUP: Display.Startup();             break;
-    case DATETIME: displayDate();               break;
-    case TEMPHUMID: displaySensor();            break;
-    case WEATHER: displayWeather();             break;
-    case NEWS: displayNews();                   break;
-    case ALARM: displayDate(); displayAlarm();  break;
-    case EDITHOUR;                              break;
-    case EDITMINUTE;                            break;
-    case SETLOCATION: setLocation();            break;
-    }
-}
-void displayAlarm(){
-    switch(alarmState){
-        
-    }
+void m_displayStartup() {
+    
 }
