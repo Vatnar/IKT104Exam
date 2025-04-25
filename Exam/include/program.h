@@ -29,7 +29,6 @@ class Program {
     void editenabled(ButtonState &buttonState);
     void edithour(ButtonState &buttonState);
     void editminute(ButtonState &buttonState);
-    void datetime(ButtonState &buttonState);
     void temphumid(ButtonState &buttonState);
     void weather(ButtonState &buttonState);
     void setloc(ButtonState &buttonState);

@@ -4,11 +4,10 @@ enum class State {
     EDITHOUR    = 1 << 2,
     EDITMINUTE  = 1 << 3,
     EDITENABLED = 1 << 4,
-    DATETIME    = 1 << 5,
-    TEMPHUMID   = 1 << 6,
-    WEATHER     = 1 << 7,
-    SETLOC      = 1 << 8,
-    NEWS        = 1 << 9,
+    TEMPHUMID   = 1 << 5,
+    WEATHER     = 1 << 6,
+    SETLOC      = 1 << 7,
+    NEWS        = 1 << 8,
 };
 
 enum class ButtonState{
