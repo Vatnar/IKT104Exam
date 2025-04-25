@@ -5,9 +5,9 @@
 
 float TempHum::temperature;
 float TempHum::humidity;
-
-DevI2C i2c(PB_11, PB_10);
-HTS221Sensor hts221(&i2c);
+TempHum::TempHum()
+    : i2c(PB_11, PB_10), hts221(&i2c) {
+}
 
 void TempHum::SensorInit(){
 hts221.enable();
@@ -17,12 +17,12 @@ thread_sleep_for(20);
 
 float TempHum::m_getTemperature(){
 hts221.get_temperature(&temperature);
-return TempHum::temperature;  
+return temperature;  
 };
 
 float TempHum::m_getHumidity(){
 hts221.get_humidity(&humidity);
-return TempHum::humidity;
+return humidity;
 };
 
 void TempHum::SensorLoop(){
