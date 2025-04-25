@@ -24,8 +24,10 @@ Program::Program(){
 
 
     // Init INPUT
-    m_inputThread.start([this]() {
-    m_input.Init(ThisThread::get_id());
+    osThreadId_t programThreadId = ThisThread::get_id();
+
+    m_inputThread.start([this, programThreadId]() {
+    m_input.Init(programThreadId);
     m_input.InputLoop();
 });
  
@@ -54,7 +56,10 @@ int Program::ProgramLoop(){
         // Wait for button input, or interrupt from alarm.
         // Then handle the input based on what the current state is.
         
-        uint32_t flags;
+        printf("\n Before flags on thread %p\n", (void*)ThisThread::get_id());
+
+        uint32_t flags = ThisThread::flags_wait_any(ANYBUTTONSTATE);
+        printf("Flags received: %u\n", flags);  // Print flags received by the main thread
 
     if ((int32_t)flags < 0) {
         printf("Error: osThreadFlagsWait returned error: 0x%08x\n", flags);

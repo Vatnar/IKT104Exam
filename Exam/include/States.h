@@ -1,5 +1,4 @@
 #include <mbed.h>
-#include <limits>
 enum class State: uint32_t {
     STARTUP     = 1UL << 0,
     SHOWALARM   = 1UL << 1,
@@ -28,3 +27,10 @@ constexpr uint32_t ANYSTATE =
     static_cast<uint32_t>(State::WEATHER) |
     static_cast<uint32_t>(State::SETLOC) |
     static_cast<uint32_t>(State::NEWS);
+
+
+constexpr uint32_t ANYBUTTONSTATE =
+    static_cast<uint32_t>(ButtonState::LEFT) |
+    static_cast<uint32_t>(ButtonState::UP) |
+    static_cast<uint32_t>(ButtonState::DOWN) |
+    static_cast<uint32_t>(ButtonState::RIGHT);
