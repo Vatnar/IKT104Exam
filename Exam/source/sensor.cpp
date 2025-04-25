@@ -1,37 +1,35 @@
 #include "mbed.h"
 #include "DFRobot_RGBLCD1602.h"
 #include "HTS221Sensor.h"
+#include "sensor.h"
 
-I2C lcdI2C(D14, D15);
-DFRobot_RGBLCD1602 lcd(&lcdI2C);
+float TempHum::temperature;
+float TempHum::humidity;
+
 DevI2C i2c(PB_11, PB_10);
 HTS221Sensor hts221(&i2c);
 
-float humidity, temperature;
-void print_sensor(float temperature, float humidity){
-    lcd.printf("Temp: %.1f C\nHumidity: %.1f\%", temperature, humidity);
-};
-
-int main()
-{
-
-lcd.init();
-thread_sleep_for(20); 
-lcd.display();
-
+void TempHum::SensorInit(){
 hts221.enable();
 hts221.init(NULL);
 thread_sleep_for(20); 
+};
 
-hts221.reset();                         // Resets in case of sensor failure
+float TempHum::m_getTemperature(){
+hts221.get_temperature(&temperature);
+return TempHum::temperature;  
+};
 
-while (true) {                          // Loop to run the program indefinetly
-    hts221.get_humidity(&humidity);
-    hts221.get_temperature(&temperature);
+float TempHum::m_getHumidity(){
+hts221.get_humidity(&humidity);
+return TempHum::humidity;
+};
 
-     thread_sleep_for(1000);                 // Sleeping for 1 second (1000ms)
-}
+void TempHum::SensorLoop(){
+    while (true){
+        m_getTemperature();
+        m_getHumidity();
+        thread_sleep_for(5000);  
+    }
+};
 
-
-return 0;
-}
