@@ -24,15 +24,16 @@ class Program {
     Program();
     int ProgramLoop();
     private:
-    void startup();
-    void showalarm();
-    void edithour();
-    void editminute();
-    void datetime();
-    void temphumid();
-    void weather();
-    void setloc();
-    void news();
+    void startup(ButtonState &buttonState);
+    void showalarm(ButtonState &buttonState);
+    void editenabled(ButtonState &buttonState);
+    void edithour(ButtonState &buttonState);
+    void editminute(ButtonState &buttonState);
+    void datetime(ButtonState &buttonState);
+    void temphumid(ButtonState &buttonState);
+    void weather(ButtonState &buttonState);
+    void setloc(ButtonState &buttonState);
+    void news(ButtonState &buttonState);
 
 
     private:
