@@ -13,13 +13,14 @@ Program::Program(){
     startupStruct m_apiargs;
 
     // Henter UNIX timestamp og slikt
-    m_apiThread.start(callback([&]() {
+    m_apiThread.start([this, &m_apiargs]() {
         m_api.doStartupStuff(&m_apiargs);
-    }));
-
+    });
 
     // init DISPLAY
-    m_displayThread.start(callback(&m_display, &Display::Init));
+    m_displayThread.start([this](){
+        m_display.Init();
+    });
 
 
     // Init INPUT
@@ -32,13 +33,18 @@ Program::Program(){
     m_apiThread.join();
     m_inputThread.join();
     
-    // Setter staten til startup og starter eventloopen til displayet.
-    // Hvilke events som skal bli kjørt blir sendt fortløpende inn med thread flags og mailbox
-    m_displayThread.start(callback(&m_display, &Display::EventLoop));
+    m_displayThread.start([this](){
+        m_display.EventLoop();
+    });
+
     m_state = State::STARTUP;
     m_displayThread.flags_set((uint32_t)m_state);
 
-    
+    m_inputThread.start([this](){
+        m_input.InputLoop();
+    });
+
+
 
     printf("Program constructed\n");
 }
