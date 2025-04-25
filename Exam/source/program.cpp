@@ -2,7 +2,6 @@
 #include "Program.h"
 #include <mbed.h>
 #include <stdio.h>
-#define ANYINPUT 0xFFFFFFFF
 
 Program::Program(){
     printf("Initializing program\n");
@@ -55,10 +54,14 @@ int Program::ProgramLoop(){
         // Wait for button input, or interrupt from alarm.
         // Then handle the input based on what the current state is.
         
-        uint32_t flags = osThreadFlagsWait(ANYINPUT, osFlagsWaitAny, osWaitForever);
-        buttonState = static_cast<ButtonState>(flags);
+        uint32_t flags;
 
-    
+    if ((int32_t)flags < 0) {
+        printf("Error: osThreadFlagsWait returned error: 0x%08x\n", flags);
+        return -1; // or handle it however you want
+    }
+
+    buttonState = static_cast<ButtonState>(flags);
         switch (m_state){
             case State::STARTUP:        startup(buttonState);       break;
             case State::SHOWALARM:      showalarm(buttonState);     break;
@@ -70,8 +73,7 @@ int Program::ProgramLoop(){
             case State::SETLOC:         setloc(buttonState);        break;
             case State::NEWS:           news(buttonState);          break;
         }
-    
-
+    ThisThread::sleep_for(50ms);
     }
     return 0;
 }
