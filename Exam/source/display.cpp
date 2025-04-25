@@ -1,26 +1,36 @@
 #include "mbed-os/mbed.h"
 #include "DFRobot_RGBLCD1602/DFRobot_RGBLCD1602.h"
+#include "display.h"
 
-I2C lcdI2C(D14, D15); 
-DFRobot_RGBLCD1602 lcd(&lcdI2C); 
+#define STARTUP = 1
+#define DATETIME = 2
+#define TEMPHUMID = 3
+#define WEATHER = 4
+#define NEWS = 5
+#define ALARM = 6
+#define EDITHOUR = 7
+#define EDITMINUTE = 8
+#define SETLOCATION = 9
 
-thread_sleep_for(80); // Trenger sleep for å initialisere LCD-displayet
-lcd.clear();
-lcd.display();
+void Display::EventLoop() {
+    State state;
 
-lcd.printf("innhold");
+    while (true) {
+        
+    }
+}
 
 void updateDisplay()
 {
     switch (state) {
-    case STARTUP: displayStartup();             break;
+    case STARTUP: Display.Startup();             break;
     case DATETIME: displayDate();               break;
     case TEMPHUMID: displaySensor();            break;
     case WEATHER: displayWeather();             break;
     case NEWS: displayNews();                   break;
     case ALARM: displayDate(); displayAlarm();  break;
-    case EDITHOUR;
-    case EDITMINUTE;
+    case EDITHOUR;                              break;
+    case EDITMINUTE;                            break;
     case SETLOCATION: setLocation();            break;
     }
 }
