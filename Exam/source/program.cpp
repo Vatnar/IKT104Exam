@@ -2,10 +2,11 @@
 #include "Program.h"
 #include <mbed.h>
 #include <stdio.h>
+#include "States.h"
+#define ANYINPUT 0xFFFFFFFF
 
 Program::Program(){
-    printf("Initializing program");
-    printf("."); printf(".\n");
+    printf("Initializing program\n");
     
     struct startupStruct {
         time_t timestamp; 
@@ -15,7 +16,7 @@ Program::Program(){
 
     // Henter UNIX timestamp og slikt
     m_apiThread.start([this, &m_apiargs]() {
-        m_api.doStartupStuff(&m_apiargs);
+        m_api.DoStuff(&m_apiargs);
     });
 
     // init DISPLAY
@@ -50,15 +51,36 @@ Program::Program(){
     printf("Program constructed\n");
 }
 
-void Display::EventLoop(){
-    State state;
+int Program::ProgramLoop(){
+    ButtonState buttonState;
     while (true){
-        #define ANY 0xFFFFFFFF
-        state = (State)ThisThread::flags_wait_any(ANY, false);
-        // Dette vil vente til en state er sendt, og behandle den
-        switch (state){
-            case State::STARTUP:    /*.....*/ break;
-            case State::SHOWALARM: /*.....*/ break;
+        // Wait for button input, or interrupt from alarm.
+        // Then handle the input based on what the current state is.
+        
+        buttonState = (ButtonState)ThisThread::flags_wait_any(ANYINPUT, true);
+    
+    
+    
+    
+    
+    
+    
+    
+        switch (m_state){
+            case State::STARTUP: break;
+            case State::SHOWALARM: break;
+            case State::EDITHOUR: break;
+            case State::EDITMINUTE: break;
+            case State::DATETIME: break;
+            case State::TEMPHUMID: break;
+            case State::WEATHER: break;
+            case State::SETLOC: break;
+            case State::NEWS: break;
         }
+        switch (buttonState){
+        
+        }
+
     }
+    return 0;
 }

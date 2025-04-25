@@ -12,6 +12,8 @@ class Input{
     void InputLoop();
 
     private:
+
+
     osThreadId_t m_programThreadId;
     InterruptIn m_left;   
     InterruptIn m_up;
