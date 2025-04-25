@@ -1,12 +1,8 @@
 #include "mbed-os/mbed.h"
-#include "DFRobot_RGBLCD1602/DFRobot_RGBLCD1602.h"
 #include "display.h"
 #include "States.h"
 
 void Display::Init() {
-    I2C lcdI2C(D14, D15); 
-    DFRobot_RGBLCD1602 lcd(&lcdI2C); 
-
     thread_sleep_for(80);               // Trenger sleep for å initialisere LCD-displayet
     lcd.clear();
     lcd.display();
