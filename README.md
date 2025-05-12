@@ -10,6 +10,19 @@
    - Select your target hardware.
    - Confirm that the correct **ports for all components** are set.
 
-## TODO
+---
 
-- [ ] List ports for all connected components (e.g., sensors, buttons, display, buzzer)
+## Component Configuration
+
+| Component                | Pin(s)      | Notes             |
+|--------------------------|-------------|-------------------|
+| **Button - Left**        | D0          | Internal pull-up  |
+| **Button - Up**          | D2          | Internal pull-up  |
+| **Button - Down**        | D3          | Internal pull-up  |
+| **Button - Right**       | D4          | Internal pull-up  |
+| **Piezo Buzzer**         | D13         |                   |
+| **Display (RGB LCD 1602)** | SDA: D14, SCL: D15 | I²C connection   |
+| **Sensor**               | -           | Mounted to board  |
+## Breadboard Configuration
+
+![Breadboard Setup](Mikrokontroller%20Layout/20250511_223532.jpg)
