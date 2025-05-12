@@ -1,3 +1,4 @@
+#pragma once
 #include "mbed.h"
 #include "DFRobot_RGBLCD1602.h"
 #include "HTS221Sensor.h"

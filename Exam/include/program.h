@@ -1,5 +1,4 @@
-#ifndef PROGRAM_H
-#define PROGRAM_H
+#pragma once
 #include <mbed.h>
 #include "Input.h"
 #include "States.h"
@@ -50,4 +49,3 @@ class Program {
     Thread m_inputThread;
 
 };
-#endif

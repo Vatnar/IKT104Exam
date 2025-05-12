@@ -1,3 +1,4 @@
+#pragma once
 #include "DFRobot_RGBLCD1602/DFRobot_RGBLCD1602.h"
 
 class Display

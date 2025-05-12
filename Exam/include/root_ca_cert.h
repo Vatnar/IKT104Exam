@@ -1,3 +1,4 @@
+#pragma once
 /* Sockets Example
  * Copyright (c) 2020 ARM Limited
  *

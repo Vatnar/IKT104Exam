@@ -1,3 +1,4 @@
+#pragma once
 #include <mbed.h>
 enum class State: uint32_t {
     STARTUP     = 1UL << 0,
