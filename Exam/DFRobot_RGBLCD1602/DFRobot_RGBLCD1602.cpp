@@ -30,7 +30,6 @@ const uint8_t color_define[4][3] = {
 DFRobot_RGBLCD1602::DFRobot_RGBLCD1602(I2C *i2c_p, uint8_t rgbAddr7b,
                                        uint8_t lcdAddr7b, uint8_t lcdCols,
                                        uint8_t lcdRows) {
-  assert(i2c_p);
   _i2c_p = i2c_p;
   _rgbAddr7b = rgbAddr7b;
   _rgbAddr8b = (rgbAddr7b << 1);

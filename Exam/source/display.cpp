@@ -20,7 +20,8 @@ void Display::EventLoop() {
         switch (state) {
             case State::STARTUP:        m_displayStartup();     break;
             case State::SHOWALARM:      m_displayAlarm();       break;
-            case State::DATETIME:       m_displayDateTime();    break;
+            //TODO tror datetime skal vises konstant på toppen - Peter
+            // case State::DATETIME:       m_displayDateTime();    break;
             case State::TEMPHUMID:      m_displayTempHum();     break;
             case State::WEATHER:        m_displayWeather();     break;
             case State::NEWS:           m_displayNews();        break;
@@ -30,7 +31,13 @@ void Display::EventLoop() {
         }
     }
 }
-
-void m_displayStartup() {
-    
-}
+// Disse må eksistere for at man kan kunne bygge - Peter
+void Display::m_displayStartup() {}
+void Display::m_displayAlarm() {}
+void Display::m_displayDateTime() {}
+void Display::m_displayTempHum() {}
+void Display::m_displayWeather() {}
+void Display::m_displayNews() {}
+void Display::m_editHour() {}
+void Display::m_editMinute() {}
+void Display::m_setLocation() {}
