@@ -29,10 +29,10 @@ Program::Program(){
 
     // Init INPUT
     osThreadId_t programThreadId = ThisThread::get_id();
-
     m_inputThread.start([this, programThreadId]() {
     m_input.Init(programThreadId);
     m_input.InputLoop();
+
 });
  
     

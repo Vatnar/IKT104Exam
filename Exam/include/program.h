@@ -39,9 +39,11 @@ class Program {
     State m_state;
 
     Display m_display;
+    Thread m_displayStartupThread;
     Thread m_displayThread;
 
     API m_api;
+    Thread m_apiStartupThread;
     Thread m_apiThread;
 
     Input m_input;
