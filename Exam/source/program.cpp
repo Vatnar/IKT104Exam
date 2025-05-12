@@ -17,8 +17,8 @@ Program::Program(){
     startupStruct m_apiargs;
 
     // Henter UNIX timestamp og slikt
-    // m_apiThread.start([this, &m_apiargs]() {
-        // m_api.DoStuff(&m_apiargs);
+     m_apiStartupThread.start([this, &m_apiargs]() {
+         m_api.Starup(&m_apiargs);
     // });
 
     // init DISPLAY
