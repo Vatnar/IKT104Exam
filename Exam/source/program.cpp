@@ -1,56 +1,57 @@
-#include "Program.h"
+#include "program.h"
 #include <mbed.h>
 #include <stdio.h>
 #include "Logger.h"
+#include "API.h"
 
 constexpr bool LOG_ENABLED = true;
 
 #define LOG(fmt, ...) LOG_IF(LOG_ENABLED, fmt, ##__VA_ARGS__)
 
 Program::Program(){
-    LOG("Initializing program\n");
+
+    m_state = State::STARTUP;   // set initial state
     
-    struct startupStruct {
-        time_t timestamp; 
-        nsapi_error_t code;
-    };
-    startupStruct m_apiargs;
+    startupStruct m_APIArgs;
+
+    // Hente unix timestamp tar litt tid så derfor si velkommen eller et eller annet på displayet i mens
+    LOG("Starting Display thread");
+    // Start display event loop
+     m_displayThread.start([this](){
+        m_display.EventLoop();
+    });
+
+    m_displayThread.flags_set((uint32_t)m_state);
+
 
     // Henter UNIX timestamp og slikt
-     m_apiStartupThread.start([this, &m_apiargs]() {
-         m_api.Starup(&m_apiargs);
-    // });
+    LOG("Starting API startup thread");
+     m_APIStartupThread.start([this, &m_APIArgs]() {
+         m_API.StartUp(m_APIArgs);
+     });
 
-    // init DISPLAY
-    // m_displayThread.start([this](){
-        // m_display.Init();
-    // });
+    
+
+    LOG("Waiting for API startup to finish");
+    m_APIStartupThread.join();
+    if (m_APIArgs.code != NSAPI_ERROR_OK){
+        LOG("[WARN] Failed to get Timestamp");
+        LOG("[WARN] %d", m_APIArgs.code);
+    }
+    else {
+         LOG("[INFO] Unix Timestamp: %ld", m_APIArgs.timestamp);
+    }
+    m_state = State::SHOWALARM;
+    m_displayThread.flags_set((uint32_t)m_state);
 
 
-    // Init INPUT
+    // Start inputhandler
+    LOG("Starting input handler thread");
     osThreadId_t programThreadId = ThisThread::get_id();
     m_inputThread.start([this, programThreadId]() {
     m_input.Init(programThreadId);
     m_input.InputLoop();
-
-});
- 
-    
-    // Venter til threadsene er ferdige
-    // m_displayThread.join();
-    // m_apiThread.join();
-    
-    // m_displayThread.start([this](){
-        // m_display.EventLoop();
-    // });
-
-    // TODO change to startup, and state should change again automatically after startup
-    m_state = State::SHOWALARM;
-    // m_displayThread.flags_set((uint32_t)m_state);
-
- 
-
-
+    });
 
     LOG("Program constructed\n");
 }
@@ -59,27 +60,29 @@ int Program::ProgramLoop(){
     ButtonState buttonState;
     int32_t flags = 0;
     while (true){
+        LOG("[Info] Current state %d", m_state);
+        LOG("[Info] Sent state to display");
+        m_displayThread.flags_set((uint32_t)m_state);
+
         // Wait for button input, or interrupt from alarm.
         // Then handle the input based on what the current state is.
         
-        LOG("\n Before flags on thread %p\n", (void*)ThisThread::get_id());
-
         flags = ThisThread::flags_wait_any(ANYBUTTONSTATE);
-    if (flags < 0) {
-        LOG("Error: osThreadFlagsWait returned error: 0x%08x\n", (uint32_t)flags);
-        continue;  // or return -1 if it's fatal
-    }
+        if (flags < 0) {
+            LOG("[Error] osThreadFlagsWait returned error: 0x%08x\n", (uint32_t)flags);
+            continue;  
+        }
 
-    LOG("Flags received: 0x%08x\n", (uint32_t)flags);
+        // LOG("[Info] Flags received: 0x%08x\n", (uint32_t)flags);
 
-    // Sanity check: one and only one flag
-    if (__builtin_popcount((uint32_t)flags) != 1) {
-        LOG("Error: Multiple or zero flags set: 0x%08x\n", (uint32_t)flags);
-        continue;
-    }
+        if (__builtin_popcount((uint32_t)flags) != 1) {
+            LOG("[Error] Multiple or zero flags set: 0x%08x\n", (uint32_t)flags);
+            continue;
+        }
 
-    buttonState = static_cast<ButtonState>(flags);
-    LOG("Button state %d", buttonState);
+        buttonState = static_cast<ButtonState>(flags);
+        
+
         switch (m_state){
             case State::STARTUP:        startup(buttonState);       break;
             case State::SHOWALARM:      showalarm(buttonState);     break;
@@ -90,9 +93,9 @@ int Program::ProgramLoop(){
             case State::WEATHER:        weather(buttonState);       break;
             case State::SETLOC:         setloc(buttonState);        break;
             case State::NEWS:           news(buttonState);          break;
-            default: LOG("Error: Unknown state %d\n", static_cast<int>(m_state)); break;
+            default: LOG("[Error] Unknown state %d\n", static_cast<int>(m_state)); break;
         }
-    ThisThread::sleep_for(50ms);
+        ThisThread::sleep_for(50ms);
     }
     return 0;
 }

@@ -2,21 +2,9 @@
 #include <mbed.h>
 #include "Input.h"
 #include "States.h"
-#define DEMO 1
+#include "display.h"
+#include "API.h"
 
-
-
-#ifdef DEMO
-class Display {
-    public:
-    void Init();
-    void EventLoop();
-};
-class API{
-    public:
-    void DoStuff(void *ptr);
-};
-#endif
 
 class Program {
     public:
@@ -41,9 +29,9 @@ class Program {
     Thread m_displayStartupThread;
     Thread m_displayThread;
 
-    API m_api;
-    Thread m_apiStartupThread;
-    Thread m_apiThread;
+    API m_API;
+    Thread m_APIStartupThread;
+    Thread m_APIThread;
 
     Input m_input;
     Thread m_inputThread;

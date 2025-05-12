@@ -1,6 +1,12 @@
 #include "mbed-os/mbed.h"
 #include "display.h"
 #include "States.h"
+#include "Logger.h"
+
+constexpr bool LOG_ENABLED = true;
+
+#define LOG(fmt, ...) LOG_IF(LOG_ENABLED, fmt, ##__VA_ARGS__)
+
 
 Display::Display(): lcdI2C(D14, D15), lcd(&lcdI2C) {
     thread_sleep_for(80);               // Trenger sleep for å initialisere LCD-displayet
@@ -9,17 +15,31 @@ Display::Display(): lcdI2C(D14, D15), lcd(&lcdI2C) {
 }
 
 void Display::EventLoop() {
-    State state;                // Instansierer State-klassen
+    State state = State::STARTUP;                // Instansierer State-klassen
+    int32_t flags = 0;
 
     while (true) {
-        #define ANY 0xFFFFFFFF
-        state = (State)ThisThread::flags_wait_any(ANY, false);      // Dette vil vente til en state er sendt, og behandle den
-        
+
+        LOG("[Info] Current display state %d", state);
+
+        flags = ThisThread::flags_wait_any(ANYSTATE);
+        if (flags < 0) {
+            LOG("[Error] osThreadFlagsWait returned error: 0x%08x\n", (uint32_t)flags);
+            continue;  
+        }
+
+        if (__builtin_popcount((uint32_t)flags) != 1) {
+            LOG("[Error] Multiple or zero flags set: 0x%08x\n", (uint32_t)flags);
+            continue;
+        }
+
+        state = static_cast<State>(flags);
         switch (state) {
             case State::STARTUP:        m_displayStartup();     break;
             case State::SHOWALARM:      m_displayAlarm();       break;
             //TODO tror datetime skal vises konstant på toppen - Peter
             // case State::DATETIME:       m_displayDateTime();    break;
+            case State::EDITENABLED:     m_editEnabled();        break;
             case State::TEMPHUMID:      m_displayTempHum();     break;
             case State::WEATHER:        m_displayWeather();     break;
             case State::NEWS:           m_displayNews();        break;
@@ -33,6 +53,7 @@ void Display::EventLoop() {
 void Display::m_displayStartup() {}
 void Display::m_displayAlarm() {}
 void Display::m_displayDateTime() {}
+void Display::m_editEnabled(){};
 void Display::m_displayTempHum() {}
 void Display::m_displayWeather() {}
 void Display::m_displayNews() {}
