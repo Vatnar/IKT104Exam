@@ -3,12 +3,13 @@
 class Display
 {
 public:
+    Display();
     void Init();
     void EventLoop();
 
 private:
-    I2C lcdI2C(D14, D15); 
-    DFRobot_RGBLCD1602 lcd(&lcdI2C); 
+    I2C lcdI2C; 
+    DFRobot_RGBLCD1602 lcd; 
     
     void m_displayStartup();        // The functions are set as private because they
     void m_displayDateTime();       // are only being used by the public methods in the class
