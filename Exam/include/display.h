@@ -5,7 +5,6 @@ class Display
 {
 public:
     Display();
-    void Init();
     void EventLoop();
 
 private:

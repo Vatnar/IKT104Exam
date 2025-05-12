@@ -2,9 +2,7 @@
 #include "display.h"
 #include "States.h"
 
-Display::Display(): lcdI2C(D14, D15), lcd(&lcdI2C) {}
-
-void Display::Init() {
+Display::Display(): lcdI2C(D14, D15), lcd(&lcdI2C) {
     thread_sleep_for(80);               // Trenger sleep for å initialisere LCD-displayet
     lcd.clear();
     lcd.display();
