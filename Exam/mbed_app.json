@@ -1,7 +1,7 @@
 {
     "config": {
         "hostname": {
-            "help": "The demo will try to connect to this web address on port 80 (or port 443 when using tls).",
+            "help": "yes",
             "value": "\"ifconfig.io\""
         },
         "use-tls-socket": {
@@ -10,9 +10,13 @@
     },
     "target_overrides": {
         "*": {
+            "target.printf_lib": "std",
+            "platform.minimal-printf-enable-floating-point": true,
+            "platform.minimal-printf-set-floating-point-max-decimals": 6,
+            "platform.minimal-printf-enable-64-bit": false,
             "nsapi.default-wifi-security": "WPA_WPA2",
-            "nsapi.default-wifi-ssid": "\"YOUR_SSID\"",
-            "nsapi.default-wifi-password": "\"YOUR_PASSWORD\"",
+            "nsapi.default-wifi-ssid": "\"student-FoU\"",
+            "nsapi.default-wifi-password": "\"stud2018\"",
             "platform.stdio-baud-rate": 9600,
             "mbed-trace.enable": false,
             "mbed-trace.max-level": "TRACE_LEVEL_DEBUG",

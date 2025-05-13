@@ -7,15 +7,22 @@
 constexpr bool LOG_ENABLED = true;
 
 #define LOG(fmt, ...) LOG_IF(LOG_ENABLED, fmt, ##__VA_ARGS__)
+#define LINE() LINE_IF(LOG_ENABLED)
+
 
 Program::Program(){
-
+  LINE();
+  LINE();
+  LINE();
+  printf("-----------------------------------------\n");
+  printf("             ALARM app                   \n\n");
+  LINE();
     m_state = State::STARTUP;   // set initial state
     
-    startupStruct m_APIArgs;
+    startupStruct m_APIArgs = {0};
 
     // Hente unix timestamp tar litt tid så derfor si velkommen eller et eller annet på displayet i mens
-    LOG("Starting Display thread");
+    LOG("[INFO] Starting Display thread");
     // Start display event loop
      m_displayThread.start([this](){
         m_display.EventLoop();
@@ -25,14 +32,14 @@ Program::Program(){
 
 
     // Henter UNIX timestamp og slikt
-    LOG("Starting API startup thread");
+    LOG("[INFO] Starting API startup thread");
      m_APIStartupThread.start([this, &m_APIArgs]() {
          m_API.StartUp(m_APIArgs);
      });
 
     
 
-    LOG("Waiting for API startup to finish");
+    LOG("[INFO] Waiting for API startup to finish");
     m_APIStartupThread.join();
     if (m_APIArgs.code != NSAPI_ERROR_OK){
         LOG("[WARN] Failed to get Timestamp");

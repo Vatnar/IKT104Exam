@@ -24,7 +24,6 @@ class Program {
 
     private:
     State m_state;
-
     Display m_display;
     Thread m_displayStartupThread;
     Thread m_displayThread;

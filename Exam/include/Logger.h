@@ -25,7 +25,16 @@ public:
         printf("\n");
         mutex.unlock();
     }
+    void PrintEmptyLine() {
+    mutex.lock();
+    printf("\n");
+    mutex.unlock();
+}
 };
 
 #define LOG_IF(enabled, fmt, ...) \
     do { if (enabled) Logger::Instance().LogInternal(__FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__); } while (0)
+
+#define LINE_IF(enabled) \
+    do { if (enabled) Logger::Instance().PrintEmptyLine(); } while (0)
+
