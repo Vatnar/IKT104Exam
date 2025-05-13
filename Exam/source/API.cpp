@@ -6,8 +6,11 @@ constexpr bool LOG_ENABLED = true;
 #define LOG(fmt, ...) LOG_IF(LOG_ENABLED, fmt, ##__VA_ARGS__)
 #define LINE() LINE_IF(LOG_ENABLED)
 
-void API::StartUp(startupStruct &apiargs) {
-    // Connect to default network interface
+using json = nlohmann::json;
+
+void API::connectWiFi() {
+  
+  // Connect to default network interface
     LINE();
     net = NetworkInterface::get_default_instance();
     if (!net) {
@@ -45,18 +48,14 @@ void API::StartUp(startupStruct &apiargs) {
     LOG("[INFO] Connected to WLAN and received IP address: %s",
         address->get_ip_address());
     LINE();
+}
+
+void API::connectToHost(TCPSocket &socket, const char *hostname) {
 
 
-
-
-
-
-    TCPSocket *socket = new TCPSocket;
-
-
-    status = socket->open(net);
+    nsapi_size_or_error_t status = socket.open(net);
      // Uten set_timout blir det kastet en exception før den får koblet seg til.
-    socket->set_timeout(500);
+    socket.set_timeout(500);
 
 
         if (status != NSAPI_ERROR_OK) {
@@ -65,9 +64,6 @@ void API::StartUp(startupStruct &apiargs) {
         // Setter opp TCP sertifikatene som er definert i cert.h
     
     LINE();
-    // const char *hostname = "http://api.ipgeolocation.io/v2/timezone?apiKey=dd8232f6deda47b7a1bf3eeb2512129d";
-     const char *hostname = "api.ipgeolocation.io";
-    
 
     status = net->gethostbyname(hostname, address);
     if (status != 0) {
@@ -83,21 +79,20 @@ void API::StartUp(startupStruct &apiargs) {
 
 
     LINE();
-    status = socket->connect(*address);
+    status = socket.connect(*address);
 
     if (status != NSAPI_ERROR_OK) {
     LOG("[WARN] Failed to connect to %s on port 80: %d", hostname, status);
-    socket->close();
+    socket.close();
     apiargs.code = status;
     return;
     }
 
     LOG("Successfully connected to %s", hostname);
+}
 
-
-
-    
-    // TODO Perhaps put in env for code style
+char* API::getTimezoneData(Socket &socket ) {
+  // TODO Perhaps put in env for code style
     const char *api_key = "dd8232f6deda47b7a1bf3eeb2512129d";
 
     char request[512];
@@ -106,10 +101,10 @@ void API::StartUp(startupStruct &apiargs) {
              "Host: api.ipgeolocation.io\r\n"
              "Connection: close\r\n\r\n",
              api_key);
-    int bytes_sent = socket->send(request, strlen(request));
+    int bytes_sent = socket.send(request, strlen(request));
     if (bytes_sent < 0) {
         LOG("[ERROR] Failed to send request: %d", bytes_sent);
-        return;
+        return nullptr;
     }
 
     char buffer[2048];
@@ -118,19 +113,18 @@ void API::StartUp(startupStruct &apiargs) {
     int retry_count = 0;
     const int max_retries = 3; // You can adjust the number of retries
 
-    while (total_bytes_received < sizeof(buffer) - 1 && (bytes_received = socket->recv(buffer + total_bytes_received, sizeof(buffer) - 1 - total_bytes_received)) > 0) {
+    while (total_bytes_received < sizeof(buffer) - 1 && (bytes_received = socket.recv(buffer + total_bytes_received, sizeof(buffer) - 1 - total_bytes_received)) > 0) {
         total_bytes_received += bytes_received;
         retry_count = 0; // Reset retry count on successful reception
     }
 
     if (bytes_received < 0) {
         LOG("[ERROR] Error receiving data: %d", bytes_received);
-        socket->close();
-        return;
+        socket.close();
+        return nullptr;
     }
 
     buffer[total_bytes_received] = '\0';
-    LOG("[INFO] Full response (%d bytes): %s", total_bytes_received, buffer);
 
     if (total_bytes_received == 0) {
         while (retry_count < max_retries) {
@@ -139,7 +133,7 @@ void API::StartUp(startupStruct &apiargs) {
             // Consider adding a delay here to avoid overwhelming the server
             ThisThread::sleep_for(std::chrono::milliseconds(1000)); // Example delay of 1 second
 
-            bytes_sent = socket->send(request, strlen(request));
+            bytes_sent = socket.send(request, strlen(request));
             if (bytes_sent < 0) {
                 LOG("[ERROR] Failed to send retry request: %d", bytes_sent);
                 break; // Exit retry loop if send fails
@@ -147,7 +141,7 @@ void API::StartUp(startupStruct &apiargs) {
 
             total_bytes_received = 0;
             bytes_received = 0;
-            while (total_bytes_received < sizeof(buffer) - 1 && (bytes_received = socket->recv(buffer + total_bytes_received, sizeof(buffer) - 1 - total_bytes_received)) > 0) {
+            while (total_bytes_received < sizeof(buffer) - 1 && (bytes_received = socket.recv(buffer + total_bytes_received, sizeof(buffer) - 1 - total_bytes_received)) > 0) {
                 total_bytes_received += bytes_received;
             }
             buffer[total_bytes_received] = '\0';
@@ -159,34 +153,30 @@ void API::StartUp(startupStruct &apiargs) {
         }
         if (total_bytes_received == 0) {
             LOG("[ERROR] Failed to receive data after %d retries.", max_retries);
-            socket->close();
+            socket.close();
             apiargs.code = NSAPI_ERROR_BUSY; // Or a more appropriate error code
-            return;
+            return nullptr;
         }
     }
+    return buffer;
+}
 
-    // Find the start of the JSON body (look for the first '{' after the headers)
-    const char *json_start = strstr(buffer, "\r\n\r\n");
-    if (json_start != nullptr) {
-        json_start += 4; // Move past the "\r\n\r\n"
-        const char *first_brace = strchr(json_start, '{');
-        if (first_brace != nullptr) {
-            LOG("[INFO] JSON Body: %s", first_brace);
-            ParseJSON(const_cast<char*>(first_brace)); // Pass only the JSON body
-        } else {
-            LOG("[ERROR] Could not find the start of the JSON object");
-        }
-    } else {
-        LOG("[ERROR] Could not find JSON body in the response");
-    }
+void API::StartUp() {
+    connectWiFi();
+
+    // New socket for use with host
+    TCPSocket *socket = new TCPSocket;
+    connectToHost(*socket, "api.ipgeolocation.io");
+    char* buffer = getTimezoneData(*socket);
+
+    
+    
+    json j;
+    parseJSON(j, buffer);
+
+    LOG("[INFO] City: %s", j["location"]["city"].get<std::string>().c_str());
 
 
-
-
-
-    // Get unix timestamp
-    // Get location based on IP
-    // Get timezone based on location
 
 
     // Set system time
@@ -197,11 +187,13 @@ void API::StartUp(startupStruct &apiargs) {
 }
 
 
-bool findFirstBalancedBlock(const std::string& input, std::string& out) {
+bool API::sanitizeJSON(const std::string& input, std::string& out) {
     size_t start = input.find('{');
     if (start == std::string::npos) return false;
 
-    // 
+    // defines integer balance, if balance is 0 at the end we can extract a
+    // valid substring. For every '{' balance increases and likewise for every '}'
+    
     int balance = 0;
     for (size_t i = start; i < input.size(); ++i) {
         if (input[i] == '{') {
@@ -218,22 +210,13 @@ bool findFirstBalancedBlock(const std::string& input, std::string& out) {
     return false; 
 }
 
-void API::ParseJSON(char *buffer) {
-    using json = nlohmann::json;
+void API::parseJSON(json &j, char *buffer) {
 
-    LOG("[DEBUG] ParseJSON received buffer starting with: %.*s", 20, buffer); // Log the first 20 characters
-    std::string j = buffer;
+    std::string b = buffer;
     std::string s;
-
-    if (!findFirstBalancedBlock(j, s)){
-      LOG("[WARN] coulndt get");
+    if(!sanitizeJSON(b, s)){
+      LOG("[WARN] coulndt get balanced block");
       return;
     }
-    json parsed_json = json::parse(s);
-
-
-        LOG("[INFO] City: %s", parsed_json["location"]["city"].get<std::string>().c_str());
-        LOG("[INFO] Country: %s", parsed_json["location"]["country_name"].get<std::string>().c_str());
-        LOG("[INFO] Time Zone: %s", parsed_json["time_zone"]["name"].get<std::string>().c_str());
-        LOG("[INFO] DST Start: %s", parsed_json["time_zone"]["dst_start"]["utc_time"].get<std::string>().c_str());
+    j = json::parse(s);
 }

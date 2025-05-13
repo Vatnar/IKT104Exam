@@ -10,7 +10,7 @@ constexpr bool LOG_ENABLED = true;
 #define LINE() LINE_IF(LOG_ENABLED)
 
 
-Program::Program(){
+Program::Program() : m_API(m_APIArgs) {
   LINE();
   LINE();
   LINE();
@@ -19,8 +19,7 @@ Program::Program(){
   LINE();
     m_state = State::STARTUP;   // set initial state
     
-    startupStruct m_APIArgs = {0};
-
+    m_APIArgs = {0};
     // Hente unix timestamp tar litt tid så derfor si velkommen eller et eller annet på displayet i mens
     LOG("[INFO] Starting Display thread");
     // Start display event loop
@@ -33,8 +32,8 @@ Program::Program(){
 
     // Henter UNIX timestamp og slikt
     LOG("[INFO] Starting API startup thread");
-     m_APIStartupThread.start([this, &m_APIArgs]() {
-         m_API.StartUp(m_APIArgs);
+     m_APIStartupThread.start([this]() {
+         m_API.StartUp();
      });
 
     
@@ -46,7 +45,8 @@ Program::Program(){
         LOG("[WARN] %d", m_APIArgs.code);
     }
     else {
-         LOG("[INFO] Unix Timestamp: %ld", m_APIArgs.timestamp);
+      LOG("[INFO] Unix Timestamp: %ld", m_APIArgs.timestamp);
+      // set time and timeoffset
     }
     m_state = State::SHOWALARM;
     m_displayThread.flags_set((uint32_t)m_state);
