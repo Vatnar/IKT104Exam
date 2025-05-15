@@ -24,7 +24,6 @@ void Sensor::getTempAndHum() {
 
     m_tempHumid.mutex.lock();
     m_tempHumid.temp = temperature;
-
     m_tempHumid.humid = humidity;
     m_tempHumid.mutex.unlock();
 

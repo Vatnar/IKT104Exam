@@ -11,7 +11,9 @@ constexpr bool LOG_ENABLED = true;
 
 #define LOG(fmt, ...) LOG_IF(LOG_ENABLED, fmt, ##__VA_ARGS__)
 
-Display::Display(TempHumid &tempHumid) : lcdI2C(D14, D15), lcd(&lcdI2C), m_tempHumid(tempHumid) {
+Display::Display(TempHumid &tempHumid/*, Datetime &datetime, Weather &weather, Coordinate &coordinate*/)
+: lcdI2C(D14, D15), lcd(&lcdI2C), m_tempHumid(tempHumid)/*, m_datetime(datetime), m_weather(weather), m_coordinate(coordinate)*/ {
+    
     lcd.init();
     thread_sleep_for(80);               // Trenger sleep for å initialisere LCD-displayet
     lcd.clear();
@@ -41,8 +43,6 @@ void Display::EventLoop() {
         switch (state) {
             case State::STARTUP:        m_displayStartup();     break;
             case State::SHOWALARM:      m_displayAlarm();       break;
-            //TODO tror datetime skal vises konstant på toppen - Peter
-            // case State::DATETIME:       m_displayDateTime();    break;
             case State::EDITENABLED:    m_editEnabled();        break;
             case State::TEMPHUMID:      m_displayTempHum();     break;
             case State::WEATHER:        m_displayWeather();     break;
@@ -54,17 +54,14 @@ void Display::EventLoop() {
     }
 }
 
-// Disse må eksistere for at man kan kunne bygge - Peter
 void Display::m_displayStartup() {
     
-    // Unix epoch time
     lcd.setCursor(0,0);
     lcd.printf("Unix epoch time:");
     lcd.setCursor(0, 1);
     lcd.printf("1234567890");
     ThisThread::sleep_for(2s);
     
-    // Latitude longitude
     lcd.clear();
     lcd.setCursor(0,0);
     lcd.printf("Lat: 58.3405");
@@ -72,7 +69,6 @@ void Display::m_displayStartup() {
     lcd.printf("Lon:  8.5934");
     ThisThread::sleep_for(2s);
 
-    // City
     lcd.clear();
     lcd.setCursor(0,0);
     lcd.printf("City:");
@@ -81,45 +77,55 @@ void Display::m_displayStartup() {
     ThisThread::sleep_for(2s);
 }
 
+// TODO Få inn day, date, month og time
 void Display::m_displayAlarm() {
+    
+    m_tempHumid.mutex.lock(); // Lås mutex for å lese sikkert
+    float temp = m_tempHumid.temp;
+    float humid = m_tempHumid.humid;
+    m_tempHumid.mutex.unlock();
+
     lcd.clear();
     lcd.setCursor(0,0);
-    lcd.printf("Alarm      7:30");
+    //lcd.printf("%s %d %s %s", day, date, month, time);
     lcd.setCursor(0, 1);
     lcd.printf("---------------");
 }
 
-void Display::m_displayDateTime() {
-    
-}
-
+// TODO Fikse
 void Display::m_editEnabled() {
 
 }
 
 void Display::m_displayTempHum() {
 
-    lcd.clear();
-    lcd.setCursor(0,0);
-
     m_tempHumid.mutex.lock(); // Lås mutex for å lese sikkert
     float temp = m_tempHumid.temp;
     float humid = m_tempHumid.humid;
     m_tempHumid.mutex.unlock();
-
+    
+    lcd.clear();
+    lcd.setCursor(0,0);
     lcd.printf("Temp: %.1f C", temp);
     lcd.setCursor(0, 1);
     lcd.printf("Humid: %.1f%%", humid);
 }
 
 void Display::m_displayWeather() {
+    
+    /*m_weather.mutex.lock(); // Lås mutex for å lese sikkert
+    std::string description = m_weather.description;
+    float temperature = m_weather.temp;
+    m_weather.mutex.unlock();
+    
     lcd.clear();
     lcd.setCursor(0,0);
-    lcd.printf("Broken clouds");
+    lcd.printf("%s", description.c_str());
     lcd.setCursor(0, 1);
-    lcd.printf("7 degrees");
+    lcd.printf("%f degrees", temperature);*/
 }
 
+// TODO Få inn RSS
 void Display::m_displayNews() {
     lcd.clear();
     lcd.setCursor(0,0);
@@ -127,14 +133,17 @@ void Display::m_displayNews() {
     m_scrollText("The past, present and future walked into a bar, it was tense");
 }
 
+// TODO Fikse
 void Display::m_editHour() {
 
 }
 
+// TODO Fikse
 void Display::m_editMinute() {
 
 }
 
+// TODO Fikse
 void Display::m_setLocation() {
     
 }

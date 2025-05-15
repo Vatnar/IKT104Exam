@@ -4,17 +4,17 @@
 
 // Contains definitions of structs
 
-struct TempHumid{
-Mutex mutex;
-float temp;
-float humid;
-}__attribute__((aligned(16)));
+struct TempHumid {
+    Mutex mutex;
+    float temp;
+    float humid;
+} __attribute__((aligned(16)));
 
 struct Datetime {
-  Mutex mutex;
-  time_t timestamp;
-  int offset;
-  nsapi_error_t code;
+    Mutex mutex;
+    time_t timestamp;
+    int offset;
+    nsapi_error_t code;
 } __attribute__((aligned(16)));
 
 struct Coordinate {

@@ -6,7 +6,10 @@ class Display
 {
 public:
     void EventLoop();
-    Display(TempHumid & tempHumid);   // Constructor tar imot referanse
+    Display(TempHumid &tempHumid);   // Constructor tar imot referanse
+    /*Display(Datetime &datetime);
+    Display(Coordinate &coordinate);
+    Display(Weather &weather);*/
 
 private:
     I2C lcdI2C; 
@@ -29,6 +32,8 @@ private:
 
     void m_scrollText(const std::string& tekst);
 
-
-    TempHumid & m_tempHumid;     // Referanse til shared struct
+    TempHumid &m_tempHumid;     // Referanse til shared struct
+    /*Datetime &m_datetime;
+    Weather &m_weather;
+    Coordinate &m_coordinate;*/
 };
