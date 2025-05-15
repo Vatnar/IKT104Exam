@@ -9,8 +9,10 @@ public:
 
 private:
     I2C lcdI2C; 
-    DFRobot_RGBLCD1602 lcd; 
+    DFRobot_RGBLCD1602 lcd;
     
+    void m_initDisplay();
+
     void m_displayStartup();        // The functions are set as private because they
     void m_displayDateTime();       // are only being used by the public methods in the class
     void m_displayTempHum();
@@ -22,5 +24,5 @@ private:
     void m_editMinute();
     void m_setLocation();
 
-    
+    void m_scrollText(const std::string& tekst);
 };
