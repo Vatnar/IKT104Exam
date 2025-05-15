@@ -9,7 +9,7 @@ class TempHum {
     static float temperature;
     static float humidity;
 
-    void SensorLoop();
+    std::pair<float,float> getTempAndHum();
     void SensorInit();
 
     private:
