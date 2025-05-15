@@ -9,7 +9,7 @@ constexpr bool LOG_ENABLED = true;
 
 #define LOG(fmt, ...) LOG_IF(LOG_ENABLED, fmt, ##__VA_ARGS__)
 
-Display::Display(): lcdI2C(D14, D15), lcd(&lcdI2C) {
+Display::Display(temphumidstruct &tempHumid) : lcdI2C(D14, D15), lcd(&lcdI2C), m_tempHumid(tempHumid) {
     lcd.init();
     thread_sleep_for(80);               // Trenger sleep for å initialisere LCD-displayet
     lcd.clear();
@@ -95,12 +95,19 @@ void Display::m_editEnabled() {
 
 }
 
-void Display::m_displayTempHum(const temphumidstruct& sensor) {
+void Display::m_displayTempHum() {
+
     lcd.clear();
     lcd.setCursor(0,0);
-    lcd.printf("Temp: %.1fC", sensor.temp);
+
+    m_tempHumid.mutex.lock(); // Lås mutex for å lese sikkert
+    float temp = m_tempHumid.temp;
+    float humid = m_tempHumid.humid;
+    m_tempHumid.mutex.unlock();
+
+    lcd.printf("Temp: %.1fC", temp);
     lcd.setCursor(0, 1);
-    lcd.printf("Humid: %.1f%%", sensor.humidity);
+    lcd.printf("Humid: %.1f%%", humid);
 }
 
 void Display::m_displayWeather() {

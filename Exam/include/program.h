@@ -4,6 +4,7 @@
 #include "States.h"
 #include "display.h"
 #include "API.h"
+#include "sensor.h"
 
 
 class Program {
@@ -27,6 +28,10 @@ class Program {
     Display m_display;
     Thread m_displayStartupThread;
     Thread m_displayThread;
+
+
+    temphumidstruct m_tempHumid;
+    Sensor m_sensor;
 
     Datetime m_datetime;
     API m_API;

@@ -5,8 +5,9 @@
 class Display
 {
 public:
-    Display();
+
     void EventLoop();
+    Display(temphumidstruct& tempHumid);   // Constructor tar imot referanse
 
 private:
     I2C lcdI2C; 
@@ -18,7 +19,7 @@ private:
 
     void m_displayStartup();        // The functions are set as private because they
     void m_displayDateTime();       // are only being used by the public methods in the class
-    void m_displayTempHum(const temphumidstruct sensor);
+    void m_displayTempHum();
     void m_editEnabled();
     void m_displayWeather();
     void m_displayNews();
@@ -28,4 +29,7 @@ private:
     void m_setLocation();
 
     void m_scrollText(const std::string& tekst);
+
+
+    temphumidstruct& m_tempHumid;     // Referanse til shared struct
 };

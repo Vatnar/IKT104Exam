@@ -9,25 +9,25 @@ constexpr bool LOG_ENABLED = true;
 #define LINE() LINE_IF(LOG_ENABLED)
 
 
-Sensor::Sensor()
-    : i2c(PB_11, PB_10), hts221(&i2c) {
-    hts221.enable();
-    hts221.init(NULL);
+Sensor::Sensor(temphumidstruct &temphum) : m_i2c(PB_11, PB_10), m_hts221(&m_i2c), m_tempHumid(temphum) {
+    m_hts221.enable();
+    m_hts221.init(NULL);
     thread_sleep_for(20); 
-    hts221.reset();
+    m_hts221.reset();
 }
 
 
+void Sensor::getTempAndHum() {
+    float temperature, humidity;
+    m_hts221.get_temperature(&temperature);
+    m_hts221.get_humidity(&humidity);
 
-temphumidstruct Sensor::getTempAndHum(){
-    temphumidstruct tempHum;
-    float t,h;
-    hts221.get_temperature(&t);
-    tempHum.temp = t;
-    LOG("Temp: %f",t);
-    hts221.get_humidity(&h);
-    tempHum.humid = h;
-    LOG("Hum: %f", h);
-    return tempHum;
+    m_tempHumid.mutex.lock();
+    m_tempHumid.temp = temperature;
+
+    m_tempHumid.humid = humidity;
+    m_tempHumid.mutex.unlock();
+
+    LOG("Temp: %f",temperature);
+    LOG("Hum: %f", humidity);
 }
-

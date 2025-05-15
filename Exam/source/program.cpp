@@ -5,6 +5,7 @@
 #include "API.h"
 #include "structs.h"
 #include "sensor.h"
+#include "Display.h"
 
 constexpr bool LOG_ENABLED = true;
 
@@ -12,13 +13,15 @@ constexpr bool LOG_ENABLED = true;
 #define LINE() LINE_IF(LOG_ENABLED)
 
 
-Program::Program() : m_API(m_datetime) {
+Program::Program() : m_API(m_datetime), m_sensor(m_tempHumid), m_display(m_tempHumid){
   LINE();
   LINE();
   LINE();
   printf("-----------------------------------------\n");
   printf("             ALARM app                   \n\n");
   LINE();
+
+
     m_state = State::STARTUP;   // set initial state
     
     m_datetime = {0};
@@ -172,14 +175,12 @@ void Program::editminute(ButtonState &buttonState){
 }
 
 void Program::temphumid(ButtonState &buttonState){
+
     LOG("STATE: TEMPHUMID\n");
-    Sensor m_sensor;
 
-    temphumidstruct tempHum = m_sensor.getTempAndHum();
+    m_sensor.getTempAndHum();
+
     m_displayThread.flags_set(uint32_t(State::TEMPHUMID));
-
-    // TODO send to display
-    // m_displayThread.flags_set(uint32_t(State::TEMPHUMID));
 
     switch(buttonState){
         case ButtonState::LEFT:     m_state = State::SHOWALARM;     break;
