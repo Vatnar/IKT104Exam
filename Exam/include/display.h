@@ -1,5 +1,6 @@
 #pragma once
 #include "DFRobot_RGBLCD1602/DFRobot_RGBLCD1602.h"
+#include "structs.h"
 
 class Display
 {
@@ -10,12 +11,14 @@ public:
 private:
     I2C lcdI2C; 
     DFRobot_RGBLCD1602 lcd;
+
+    static constexpr uint32_t FLAG_STOP = 0x80000000;
     
     void m_initDisplay();
 
     void m_displayStartup();        // The functions are set as private because they
     void m_displayDateTime();       // are only being used by the public methods in the class
-    void m_displayTempHum();
+    void m_displayTempHum(const temphumidstruct sensor);
     void m_editEnabled();
     void m_displayWeather();
     void m_displayNews();

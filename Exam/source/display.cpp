@@ -3,12 +3,14 @@
 #include "States.h"
 #include "Logger.h"
 #include <string>
+#include "structs.h"
 
 constexpr bool LOG_ENABLED = true;
 
 #define LOG(fmt, ...) LOG_IF(LOG_ENABLED, fmt, ##__VA_ARGS__)
 
 Display::Display(): lcdI2C(D14, D15), lcd(&lcdI2C) {
+    lcd.init();
     thread_sleep_for(80);               // Trenger sleep for å initialisere LCD-displayet
     lcd.clear();
     lcd.display();
@@ -61,6 +63,7 @@ void Display::m_displayStartup() {
     ThisThread::sleep_for(2s);
     
     // Latitude longitude
+    lcd.clear();
     lcd.setCursor(0,0);
     lcd.printf("Lat: 58.3405");
     lcd.setCursor(0, 1);
@@ -68,6 +71,7 @@ void Display::m_displayStartup() {
     ThisThread::sleep_for(2s);
 
     // City
+    lcd.clear();
     lcd.setCursor(0,0);
     lcd.printf("City:");
     lcd.setCursor(0, 1);
@@ -76,10 +80,11 @@ void Display::m_displayStartup() {
 }
 
 void Display::m_displayAlarm() {
+    lcd.clear();
     lcd.setCursor(0,0);
-    lcd.printf("Alarm     7:30");
+    lcd.printf("Alarm      7:30");
     lcd.setCursor(0, 1);
-    lcd.printf("--------------");
+    lcd.printf("---------------");
 }
 
 void Display::m_displayDateTime() {
@@ -90,14 +95,16 @@ void Display::m_editEnabled() {
 
 }
 
-void Display::m_displayTempHum() {
+void Display::m_displayTempHum(const temphumidstruct& sensor) {
+    lcd.clear();
     lcd.setCursor(0,0);
-    lcd.printf("Temp: 21.4 C");
+    lcd.printf("Temp: %.1fC", sensor.temp);
     lcd.setCursor(0, 1);
-    lcd.printf("Humidity: 69%");
+    lcd.printf("Humid: %.1f%%", sensor.humidity);
 }
 
 void Display::m_displayWeather() {
+    lcd.clear();
     lcd.setCursor(0,0);
     lcd.printf("Broken clouds");
     lcd.setCursor(0, 1);
@@ -105,10 +112,10 @@ void Display::m_displayWeather() {
 }
 
 void Display::m_displayNews() {
+    lcd.clear();
     lcd.setCursor(0,0);
     lcd.printf("BBC");
-    lcd.setCursor(0, 1);
-    m_scrollText("The past, present and future walked into a bar, it was tense");
+    //m_scrollText("The past, present and future walked into a bar, it was tense");
 }
 
 void Display::m_editHour() {
@@ -123,20 +130,37 @@ void Display::m_setLocation() {
     
 }
 
+// Oppdatert m_scrollText med avbrytbar scrolling via EventFlags
+// Forutsetter at FLAG_STOP er deklarert som: static constexpr uint32_t FLAG_STOP = 0x80000000;
+
 void Display::m_scrollText(const std::string& text) {
-    int windowSize = 16; // antall kolonner
-    int lengde = text.length();
+    const int windowSize = 16;  // antall kolonner
+    const int length = text.length();
 
-    // Hvis teksten er kortere enn displayet, bare vis den
-    if (lengde <= windowSize) {
+    // Sett cursor til andre linje før visning
+    lcd.setCursor(0, 1);
 
-        lcd.printf("%-*s", windowSize, text.c_str()); // fyll med mellomrom
+    // Kort tekst: vis uten scrolling
+    if (length <= windowSize) {
+        lcd.printf("%-*s", windowSize, text.c_str());  // fyll med mellomrom
         return;
     }
 
-    for (int i = 0; i <= lengde - windowSize; i++) {
-        
-        lcd.printf("%.*s", windowSize, text.c_str() + i); // vis 16 tegn fra posisjon i
-        ThisThread::sleep_for(50ms);
+    // Scroll tekst, avbryt ved FLAG_STOP
+    for (int i = 0; i <= length - windowSize; ++i) {
+        // Sjekk om stop-flag er satt før visning
+        if (ThisThread::flags_get() & FLAG_STOP) {
+            ThisThread::flags_clear(FLAG_STOP);
+            return;
+        }
+
+        lcd.setCursor(0, 1);
+        lcd.printf("%.*s", windowSize, text.c_str() + i);
+
+        // Vent maks 50 ms, men avbryt umiddelbart om FLAG_STOP settes
+        if (ThisThread::flags_wait_any(FLAG_STOP, 50) & FLAG_STOP) {
+            ThisThread::flags_clear(FLAG_STOP);
+            return;
+        }
     }
 }
