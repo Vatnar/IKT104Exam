@@ -3,27 +3,11 @@
 #include <stdio.h>
 #include <NetworkInterface.h>
 #include "json.hpp"
+#include "structs.h"
 using json = nlohmann::json;
 
 
-struct Datetime {
-  Mutex mutex;
-  time_t timestamp;
-  int offset;
-  nsapi_error_t code;
-} __attribute__((aligned(16)));
 
-struct Coordinate {
-    Mutex mutex;
-    double latitude;
-    double longitude;
-} __attribute__((aligned(16)));
-
-struct Weather {
-    Mutex mutex;
-    std::string description;
-    float temp;
-} __attribute__((aligned(16)));
 
 
 //Provides access to networking features for synchronizing time and fetching position

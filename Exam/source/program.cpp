@@ -3,6 +3,9 @@
 #include <stdio.h>
 #include "Logger.h"
 #include "API.h"
+#include "structs.h"
+#include "sensor.h"
+#include "Display.h"
 
 constexpr bool LOG_ENABLED = true;
 
@@ -10,7 +13,7 @@ constexpr bool LOG_ENABLED = true;
 #define LINE() LINE_IF(LOG_ENABLED)
 
 
-Program::Program() : m_API(m_datetime, m_weather, m_coordinate) {
+Program::Program() : m_API(m_datetime, m_weather, m_coordinate), m_sensor(m_tempHumid), m_display(m_tempHumid){
   LINE();
   LINE();
   LINE();
@@ -19,7 +22,7 @@ Program::Program() : m_API(m_datetime, m_weather, m_coordinate) {
   LINE();
 
 
-    // Initialization 
+
     
     m_state = State::STARTUP;   // set initial state
     m_datetime.mutex.lock();
@@ -195,11 +198,13 @@ void Program::editminute(ButtonState &buttonState){
 }
 
 void Program::temphumid(ButtonState &buttonState){
+
     LOG("STATE: TEMPHUMID\n");
 
 
-    // TODO send to display
-    // m_displayThread.flags_set(uint32_t(State::TEMPHUMID));
+    m_sensor.getTempAndHum();
+
+    m_displayThread.flags_set(uint32_t(State::TEMPHUMID));
 
     switch(buttonState){
         case ButtonState::LEFT:     m_state = State::SHOWALARM;     break;

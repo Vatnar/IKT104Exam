@@ -2,20 +2,19 @@
 #include "mbed.h"
 #include "DFRobot_RGBLCD1602.h"
 #include "HTS221Sensor.h"
+#include "structs.h"
 
-class TempHum {
-    public:
-    TempHum();
-    static float temperature;
-    static float humidity;
 
-    void SensorLoop();
-    void SensorInit();
+class Sensor {
+public:
+    Sensor(temphumidstruct &temphum);
+    
+    void getTempAndHum();
 
-    private:
-    float m_getTemperature();
-    float m_getHumidity();
+private:
+    temphumidstruct &m_tempHumid;
 
-    DevI2C i2c;
-    HTS221Sensor hts221;
+    DevI2C m_i2c;
+    HTS221Sensor m_hts221;
+
 };
