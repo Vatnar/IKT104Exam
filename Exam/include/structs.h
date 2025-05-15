@@ -1,9 +1,10 @@
 #pragma once
 #include <mbed.h>
+#include <string>
+
 // Contains definitions of structs
 
-
-struct temphumidstruct{
+struct TempHumid{
 Mutex mutex;
 float temp;
 float humid;
