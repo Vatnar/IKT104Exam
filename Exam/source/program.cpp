@@ -30,23 +30,23 @@ Program::Program() : m_API(m_APIArgs) {
     m_displayThread.flags_set((uint32_t)m_state);
 
 
-    // Henter UNIX timestamp og slikt
     LOG("[INFO] Starting API startup thread");
      m_APIStartupThread.start([this]() {
          m_API.StartUp();
      });
 
-    
 
-    LOG("[INFO] Waiting for API startup to finish");
+
+     LOG("[INFO] Waiting for API startup to finish");
+     
     m_APIStartupThread.join();
     if (m_APIArgs.code != NSAPI_ERROR_OK){
         LOG("[WARN] Failed to get Timestamp");
         LOG("[WARN] %d", m_APIArgs.code);
     }
     else {
-      LOG("[INFO] Unix Timestamp: %ld", m_APIArgs.timestamp);
-      // set time and timeoffset
+      LOG("[INFO] Unix Timestamp: %d", m_APIArgs.timestamp);
+      LOG("[INFO] TIMEZONE OFFSET: %d", m_APIArgs.offset);
     }
     m_state = State::SHOWALARM;
     m_displayThread.flags_set((uint32_t)m_state);
@@ -201,6 +201,7 @@ void Program::weather(ButtonState &buttonState){
 void Program::setloc(ButtonState &buttonState){
     LOG("STATE: SETLOC\n");
 
+    
     // TODO send to display
     // m_displayThread.flags_set(uint32_t(State::SETLOC));
 
