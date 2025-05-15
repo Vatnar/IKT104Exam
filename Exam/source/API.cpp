@@ -48,6 +48,9 @@ void API::connectWiFi() {
     LOG("[INFO] Connected to WLAN and received IP address: %s",
         m_address->get_ip_address());
     LINE();
+    if (m_address->get_ip_address() == "0.0.0.0") {
+      LOG("[ERROR] DIDNT GEt API, WAIT A FEW MINUTES\n\n\n\n\n\n\n\n");
+    }
 }
 
 void API::connectToHost(TCPSocket &socket, const char *hostname) {
@@ -248,7 +251,6 @@ void API::GetDateTimeByCoordinates() {
 
 
     m_coordinate.mutex.lock();
-    LOG("BEFORE HTTP REQUEST");
     snprintf(request, sizeof(request),
              "GET /v2/timezone?apiKey=%s&lat=%f&long=%f HTTP/1.1\r\n"
              "Host: api.ipgeolocation.io\r\n"
@@ -262,7 +264,6 @@ void API::GetDateTimeByCoordinates() {
         return;
     }
 
-    LOG("BEFORE RECEIVE");
     char buffer[2048];
     int total_bytes_received = 0;
     int bytes_received = 0;
@@ -320,14 +321,14 @@ void API::GetDateTimeByCoordinates() {
     parseJSON(j, buffer);
 
     int timestamp = (int)j["time_zone"]["date_time_unix"];
-    LOG("%d", timestamp);
     int offset = j["time_zone"]["offset"];
-    LOG("%d", offset);
 
     set_time(timestamp);
+    m_datetime.mutex.lock();
     m_datetime.timestamp = timestamp;
     m_datetime.offset = offset;
     m_datetime.code = NSAPI_ERROR_OK;
+    m_datetime.mutex.unlock();
 }
 
 void API::GetDailyForecastByCoordinates() {
@@ -383,7 +384,73 @@ void API::GetDailyForecastByCoordinates() {
     socket->close();
 }
 
+void API::GetRSS() {
+    std::unique_ptr<TCPSocket> socket = std::make_unique<TCPSocket>();
+    connectToHost(*socket, "rss.cnn.com");
 
+    const char *request = "GET /rss/cnn_topstories.rss HTTP/1.1\r\n"
+                          "Host: rss.cnn.com\r\n"
+                          "Connection: close\r\n\r\n";
+
+    int bytes_sent = socket->send(request, strlen(request));
+    if (bytes_sent < 0) {
+        LOG("[ERROR] Failed to send request: %d", bytes_sent);
+        return;
+    }
+
+    std::string recv_buffer;    
+    std::string result;         
+    int story_count = 0;
+
+    char temp[512];             
+    int bytes_received = 0;
+
+    while ((bytes_received = socket->recv(temp, sizeof(temp))) > 0) {
+        recv_buffer.append(temp, bytes_received);
+
+        size_t pos = 0;
+        while (story_count < 3) {
+            size_t item_start = recv_buffer.find("<item>", pos);
+            if (item_start == std::string::npos) break;
+
+            size_t item_end = recv_buffer.find("</item>", item_start);
+            if (item_end == std::string::npos) break;  // Wait for more data
+
+            std::string item_content = recv_buffer.substr(item_start, item_end + 7 - item_start);
+
+            // Extract title
+            size_t title_start = item_content.find("<title>");
+            size_t title_end = item_content.find("</title>");
+
+            if (title_start != std::string::npos && title_end != std::string::npos && title_end > title_start) {
+                title_start += 16;
+                std::string title = item_content.substr(title_start, title_end - title_start);
+                result += title + "\n";
+                story_count++;
+            }
+
+            pos = item_end + 4;  
+        }
+
+        if (pos > 0) {
+            recv_buffer.erase(0, pos);
+        }
+
+        if (story_count >= 3) break; 
+    }
+
+    if (bytes_received < 0) {
+        LOG("[ERROR] Error receiving data: %d", bytes_received);
+        socket->close();
+        return;
+    }
+
+    m_rssstream.mutex.lock();
+    m_rssstream.rss = std::move(result);
+    m_rssstream.mutex.unlock();
+
+    socket->close();
+}
 
 
 bool API::sanitizeJSON(const std::string& input, std::string& out) {

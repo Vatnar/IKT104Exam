@@ -24,7 +24,8 @@ class Program {
     void news(ButtonState &buttonState);
 
 
-    private:
+  private:
+    
     State m_state;
     Display m_display;
     Thread m_displayStartupThread;
@@ -34,10 +35,12 @@ class Program {
     TempHumid m_tempHumid;
     Sensor m_sensor;
 
+
+    
     Datetime m_datetime;
     Weather m_weather;
     Coordinate m_coordinate;
-
+    RSSStream m_rssstream;
     
     API m_API;
     Thread m_APIStartupThread;

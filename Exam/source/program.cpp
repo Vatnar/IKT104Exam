@@ -13,7 +13,9 @@ constexpr bool LOG_ENABLED = true;
 #define LINE() LINE_IF(LOG_ENABLED)
 
 
-Program::Program() : m_API(m_datetime, m_weather, m_coordinate), m_sensor(m_tempHumid), m_display(m_tempHumid){
+Program::Program()
+    : m_API(m_datetime, m_weather, m_coordinate, m_rssstream),
+      m_sensor(m_tempHumid), m_display(m_tempHumid){
 
   LINE();
   LINE();
@@ -58,7 +60,6 @@ Program::Program() : m_API(m_datetime, m_weather, m_coordinate), m_sensor(m_temp
      });
 
 
-
      LOG("[INFO] Waiting for API startup to finish");
      
     m_APIStartupThread.join();
@@ -73,6 +74,8 @@ Program::Program() : m_API(m_datetime, m_weather, m_coordinate), m_sensor(m_temp
       LOG("[INFO] TIMEZONE OFFSET: %d", m_datetime.offset);
       m_datetime.mutex.unlock();
     }
+    
+    m_API.GetRSS();
 
     
     m_API.GetDateTimeByCoordinates();

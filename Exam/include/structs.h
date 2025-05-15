@@ -3,6 +3,10 @@
 #include <string>
 
 // Contains definitions of structs
+struct RSSStream {
+  Mutex mutex;
+  std::string rss;
+}__attribute__((aligned(16)));
 
 struct TempHumid{
 Mutex mutex;
