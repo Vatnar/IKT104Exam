@@ -121,7 +121,7 @@ std::string API::getTimezoneData(Socket &socket ) {
     if (bytes_received < 0) {
         LOG("[ERROR] Error receiving data: %d", bytes_received);
         socket.close();
-        return nullptr;
+        return "";
     }
 
     buffer[total_bytes_received] = '\0';
@@ -155,7 +155,7 @@ std::string API::getTimezoneData(Socket &socket ) {
             LOG("[ERROR] Failed to receive data after %d retries.", max_retries);
             socket.close();
             m_datetime.code = NSAPI_ERROR_BUSY;
-            return nullptr;
+            return "";
         }
     }
     return std::string(buffer, total_bytes_received);
@@ -179,7 +179,7 @@ void API::StartUp() {
 
 
     LOG("About to extract info startup");
-
+    LOG("%d", (int)j["time_zone"]["date_time_unix"]);
 
     m_datetime.mutex.lock();
     if (j.contains("time_zone") &&
@@ -193,7 +193,7 @@ void API::StartUp() {
 
     if (j.contains("time_zone") &&
         j["time_zone"].contains("offset")) {
-        m_datetime.timestamp = j["time_zone"]["offset"];
+        m_datetime.offset = j["time_zone"]["offset"];
     } else {
         LOG("[ERROR] MIssing timezone/offset in JSON");
         m_datetime.code = NSAPI_ERROR_PARAMETER;
@@ -201,23 +201,46 @@ void API::StartUp() {
     m_datetime.mutex.unlock();
 
     LOG("Got time info");
-    
+
     m_coordinate.mutex.lock();
+    LOG("Locked coordinate mutex");
+
     if (j.contains("location") && j["location"].contains("longitude")) {
-        m_coordinate.longitude = j["location"]["longitude"];
-    } else {
-      LOG("[ERROR] Missing location/longitude in JSON");
+        LOG("DOES CONTAIN LOCATION");
+        auto lon_str = j["location"]["longitude"].get<std::string>();
+        LOG("SUCCEED");
+        const char *cstr = lon_str.c_str();
+        lon_str.back()
+        char* end;
+        double lon = std::strtod(cstr, &end);
+
+        LOG("SUCEED");
+        if (end != lon_str.c_str()) {
+          m_coordinate.longitude = lon;
+        } else {
+            LOG("[ERROR] Failed to convert longitude string to double");
+        }
+    }
+    if (j.contains("location") && j["location"].contains("latitude")) {
+        LOG("DOES CONTAIN LOCATION");
+        auto lon_str = j["location"]["latitude"].get<std::string>();
+        LOG("SUCCEED");
+        const char* cstr = lon_str.c_str();  
+        char* end;
+        double lon = std::strtod(cstr, &end);
+
+        LOG("SUCEED");
+        if (end != lon_str.c_str()) {
+          m_coordinate.latitude = lon;
+        } else {
+            LOG("[ERROR] Failed to convert latitude string to double");
+        }
+      
     }
 
-    if (j.contains("location") && j["location"].contains("latitude")) {
-        m_coordinate.latitude = j["location"]["latitude"];
-    } else {
-    LOG("[ERROR] Missing location/latitude in JSON");
-    }
     LOG("long: %f, lat %f", m_coordinate.longitude, m_coordinate.latitude);
 
     m_coordinate.mutex.unlock();
-    LOG("Got Location info");
 
     socket->close();
 }
@@ -364,11 +387,13 @@ void API::GetDailyForecastByCoordinates() {
     json j;
     parseJSON(j, buffer);
 
-    std::string description = j["weather"][0]["description"];
-    float temp_day = j["temp"]["day"];
-
-    LOG("Day Temp: %.1f°C", temp_day);
+    std::string description = j["weather"]["description"];
     LOG("Weather: %s", description.c_str());
+
+
+    float temp_day = j["main"]["temp"];
+    
+
 
     socket->close();
 }
@@ -407,7 +432,7 @@ void API::parseJSON(json &j, const char *buffer) {
       LOG("[WARN] coulndt get balanced block");
       return;
     }
-    LOG("Sanitized: %s", s.c_str() );
+    LOG("Sanitized: %s", s() );
     j = json::parse(s);
     LOG("Parsed");
 }
