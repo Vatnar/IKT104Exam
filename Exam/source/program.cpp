@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include "Logger.h"
 #include "API.h"
+#include "structs.h"
+#include "sensor.h"
 
 constexpr bool LOG_ENABLED = true;
 
@@ -171,6 +173,10 @@ void Program::editminute(ButtonState &buttonState){
 
 void Program::temphumid(ButtonState &buttonState){
     LOG("STATE: TEMPHUMID\n");
+    Sensor m_sensor;
+
+    temphumidstruct tempHum = m_sensor.getTempAndHum();
+    m_displayThread.flags_set(uint32_t(State::TEMPHUMID));
 
     // TODO send to display
     // m_displayThread.flags_set(uint32_t(State::TEMPHUMID));
