@@ -86,7 +86,6 @@ Program::Program() : m_API(m_datetime, m_weather, m_coordinate) {
     m_input.InputLoop();
     });
 
-    LOG("Program constructed\n");
 }
 
 int Program::ProgramLoop(){

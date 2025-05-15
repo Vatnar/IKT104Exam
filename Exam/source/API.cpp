@@ -178,7 +178,6 @@ void API::StartUp() {
 
 
 
-    LOG("About to extract info startup");
     LOG("%d", (int)j["time_zone"]["date_time_unix"]);
 
     m_datetime.mutex.lock();
@@ -200,21 +199,15 @@ void API::StartUp() {
     }
     m_datetime.mutex.unlock();
 
-    LOG("Got time info");
 
     m_coordinate.mutex.lock();
-    LOG("Locked coordinate mutex");
 
     if (j.contains("location") && j["location"].contains("longitude")) {
-        LOG("DOES CONTAIN LOCATION");
         auto lon_str = j["location"]["longitude"].get<std::string>();
-        LOG("SUCCEED");
         const char *cstr = lon_str.c_str();
-        lon_str.back()
         char* end;
         double lon = std::strtod(cstr, &end);
 
-        LOG("SUCEED");
         if (end != lon_str.c_str()) {
           m_coordinate.longitude = lon;
         } else {
@@ -224,12 +217,10 @@ void API::StartUp() {
     if (j.contains("location") && j["location"].contains("latitude")) {
         LOG("DOES CONTAIN LOCATION");
         auto lon_str = j["location"]["latitude"].get<std::string>();
-        LOG("SUCCEED");
         const char* cstr = lon_str.c_str();  
         char* end;
         double lon = std::strtod(cstr, &end);
 
-        LOG("SUCEED");
         if (end != lon_str.c_str()) {
           m_coordinate.latitude = lon;
         } else {
@@ -325,7 +316,6 @@ void API::GetDateTimeByCoordinates() {
     }
     socket->close();
 
-    LOG("BEFORE JSON");
     json j;
     parseJSON(j, buffer);
 
@@ -338,20 +328,16 @@ void API::GetDateTimeByCoordinates() {
     m_datetime.timestamp = timestamp;
     m_datetime.offset = offset;
     m_datetime.code = NSAPI_ERROR_OK;
-
-    LOG("Finished");
 }
 
 void API::GetDailyForecastByCoordinates() {
 
-    LOG("New socket for forecast");
     std::unique_ptr<TCPSocket> socket = std::make_unique<TCPSocket>();
     connectToHost(*socket, "api.openweathermap.org");
 
     const char *api_key = "9a370cb3212a5d999fb46e975d41bd72";
 
     char request[512];
-
     m_coordinate.mutex.lock();
     snprintf(request, sizeof(request),
              "GET /data/2.5/weather?lat=%f&lon=%f&appid=%s HTTP/1.1\r\n"
@@ -387,12 +373,11 @@ void API::GetDailyForecastByCoordinates() {
     json j;
     parseJSON(j, buffer);
 
-    std::string description = j["weather"]["description"];
-    LOG("Weather: %s", description.c_str());
 
-
-    float temp_day = j["main"]["temp"];
-    
+    std::string description = j["weather"][0]["description"].get<std::string>();
+    float temp = float(j["main"]["temp"]) - 273.15;
+    LINE();
+    LOG("[info] Weather: %s, temp: %f", description.c_str(), temp);
 
 
     socket->close();
@@ -429,15 +414,11 @@ void API::parseJSON(json &j, const char *buffer) {
     std::string b = buffer;
     std::string s;
     if(!sanitizeJSON(b, s)){
-      LOG("[WARN] coulndt get balanced block");
       return;
     }
-    LOG("Sanitized: %s", s() );
     j = json::parse(s);
-    LOG("Parsed");
 }
 
 API::~API() {
   delete m_address;
-
 }
