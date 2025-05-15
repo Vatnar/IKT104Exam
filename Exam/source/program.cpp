@@ -10,7 +10,7 @@ constexpr bool LOG_ENABLED = true;
 #define LINE() LINE_IF(LOG_ENABLED)
 
 
-Program::Program() : m_API(m_APIArgs) {
+Program::Program() : m_API(m_datetime) {
   LINE();
   LINE();
   LINE();
@@ -19,7 +19,7 @@ Program::Program() : m_API(m_APIArgs) {
   LINE();
     m_state = State::STARTUP;   // set initial state
     
-    m_APIArgs = {0};
+    m_datetime = {0};
     // Hente unix timestamp tar litt tid så derfor si velkommen eller et eller annet på displayet i mens
     LOG("[INFO] Starting Display thread");
     // Start display event loop
@@ -40,13 +40,13 @@ Program::Program() : m_API(m_APIArgs) {
      LOG("[INFO] Waiting for API startup to finish");
      
     m_APIStartupThread.join();
-    if (m_APIArgs.code != NSAPI_ERROR_OK){
+    if (m_datetime.code != NSAPI_ERROR_OK){
         LOG("[WARN] Failed to get Timestamp");
-        LOG("[WARN] %d", m_APIArgs.code);
+        LOG("[WARN] %d", m_datetime.code);
     }
     else {
-      LOG("[INFO] Unix Timestamp: %d", m_APIArgs.timestamp);
-      LOG("[INFO] TIMEZONE OFFSET: %d", m_APIArgs.offset);
+      LOG("[INFO] Unix Timestamp: %d", m_datetime.timestamp);
+      LOG("[INFO] TIMEZONE OFFSET: %d", m_datetime.offset);
     }
     m_state = State::SHOWALARM;
     m_displayThread.flags_set((uint32_t)m_state);

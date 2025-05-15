@@ -12,9 +12,9 @@ void API::connectWiFi() {
   
   // Connect to default network interface
     LINE();
-    net = NetworkInterface::get_default_instance();
-    if (!net) {
-        datetime.code = NSAPI_ERROR_NO_CONNECTION;
+    m_net = NetworkInterface::get_default_instance();
+    if (!m_net) {
+        m_datetime.code = NSAPI_ERROR_NO_CONNECTION;
         return;
     }
     LOG("[INFO] Successfully got network interface");
@@ -23,7 +23,7 @@ void API::connectWiFi() {
     LINE();
     nsapi_size_or_error_t status  = 0;
     do {
-        status = net->connect();
+        status = m_net->connect();
 
         if (status != NSAPI_ERROR_OK) {
             LOG("[WARN] Couldn't connect to network %d", status);
@@ -31,13 +31,13 @@ void API::connectWiFi() {
     } while (status != NSAPI_ERROR_OK);
     LOG("[INFO] Connected to network");
 
-    address = new SocketAddress;
+    m_address = new SocketAddress;
 
 
     LINE();    
     do {
         LOG("[INFO] Getting local IP...");
-        status = net->get_ip_address(address);
+        status = m_net->get_ip_address(m_address);
 
         if (status != NSAPI_ERROR_OK) {
             LOG("[WARN] Failed to get local I %d", status);
@@ -46,14 +46,14 @@ void API::connectWiFi() {
     while (status != NSAPI_ERROR_OK);
 
     LOG("[INFO] Connected to WLAN and received IP address: %s",
-        address->get_ip_address());
+        m_address->get_ip_address());
     LINE();
 }
 
 void API::connectToHost(TCPSocket &socket, const char *hostname) {
 
 
-    nsapi_size_or_error_t status = socket.open(net);
+    nsapi_size_or_error_t status = socket.open(m_net);
      
     socket.set_timeout(500);
 
@@ -65,26 +65,26 @@ void API::connectToHost(TCPSocket &socket, const char *hostname) {
     
     LINE();
 
-    status = net->gethostbyname(hostname, address);
+    status = m_net->gethostbyname(hostname, m_address);
     if (status != 0) {
         LOG("[WARN] gethostbyname(%s) returned: %d", hostname, status);
     }
 
-    LOG("[INFO] IP address of server %s is %s", hostname, address->get_ip_address());
+    LOG("[INFO] IP address of server %s is %s", hostname, m_address->get_ip_address());
 
      if (status != NSAPI_ERROR_OK) {
      LOG("[WARN] DNS resolution failed for %s: %d", hostname, status);
      }
-    address->set_port(80);
+    m_address->set_port(80);
 
 
     LINE();
-    status = socket.connect(*address);
+    status = socket.connect(*m_address);
 
     if (status != NSAPI_ERROR_OK) {
     LOG("[WARN] Failed to connect to %s on port 80: %d", hostname, status);
     socket.close();
-    datetime.code = status;
+    m_datetime.code = status;
     return;
     }
 
@@ -154,7 +154,7 @@ char* API::getTimezoneData(Socket &socket ) {
         if (total_bytes_received == 0) {
             LOG("[ERROR] Failed to receive data after %d retries.", max_retries);
             socket.close();
-            datetime.code = NSAPI_ERROR_BUSY;
+            m_datetime.code = NSAPI_ERROR_BUSY;
             return nullptr;
         }
     }
@@ -185,9 +185,9 @@ void API::StartUp() {
       int offset = j["time_zone"]["offset"];
 
         set_time(timestamp);
-        datetime.timestamp = timestamp;
-        datetime.offset = offset;
-        datetime.code = NSAPI_ERROR_OK;
+        m_datetime.timestamp = timestamp;
+        m_datetime.offset = offset;
+        m_datetime.code = NSAPI_ERROR_OK;
 
     } else {
         LOG("[ERROR] missing keys");
@@ -261,7 +261,7 @@ void API::GetDateTimeByCoordinates(Coordinate coordinate) {
         if (total_bytes_received == 0) {
             LOG("[ERROR] Failed to receive data after %d retries.", max_retries);
             socket->close();
-            datetime.code = NSAPI_ERROR_BUSY;
+            m_datetime.code = NSAPI_ERROR_BUSY;
             return;
         }
     }
@@ -273,9 +273,9 @@ void API::GetDateTimeByCoordinates(Coordinate coordinate) {
     int offset = j["time_zone"]["offset"];
 
     set_time(timestamp);
-    datetime.timestamp = timestamp;
-    datetime.offset = offset;
-    datetime.code = NSAPI_ERROR_OK;
+    m_datetime.timestamp = timestamp;
+    m_datetime.offset = offset;
+    m_datetime.code = NSAPI_ERROR_OK;
 }
 
 

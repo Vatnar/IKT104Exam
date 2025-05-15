@@ -25,14 +25,14 @@ public:
 // Fetches Unix timestamp and location + timezone and returns them in apiargs
   void StartUp();
 
-  API(Datetime &apiDatetime) : datetime(apiDatetime){};
+  API(Datetime &apiDatetime) : m_datetime(apiDatetime){};
 
   void GetDateTimeByCoordinates(Coordinate coordinate);
 
 private:
-  NetworkInterface *net = nullptr;
-  SocketAddress *address = nullptr;
-  Datetime &datetime;
+  NetworkInterface *m_net = nullptr;
+  SocketAddress *m_address = nullptr;
+  Datetime &m_datetime;
 
   void connectWiFi();
   void connectToHost(TCPSocket &socket, const char *hostname);
