@@ -2,34 +2,32 @@
 #include "DFRobot_RGBLCD1602.h"
 #include "HTS221Sensor.h"
 #include "sensor.h"
+#include "Logger.h"
+constexpr bool LOG_ENABLED = true;
 
-float TempHum::temperature;
-float TempHum::humidity;
-TempHum::TempHum()
-    : i2c(PB_11, PB_10), hts221(&i2c) {
+#define LOG(fmt, ...) LOG_IF(LOG_ENABLED, fmt, ##__VA_ARGS__)
+#define LINE() LINE_IF(LOG_ENABLED)
+
+
+Sensor::Sensor(temphumidstruct &temphum) : m_i2c(PB_11, PB_10), m_hts221(&m_i2c), m_tempHumid(temphum) {
+    m_hts221.enable();
+    m_hts221.init(NULL);
+    thread_sleep_for(20); 
+    m_hts221.reset();
 }
 
-void TempHum::SensorInit(){
-hts221.enable();
-hts221.init(NULL);
-thread_sleep_for(20); 
-};
 
-float TempHum::m_getTemperature(){
-hts221.get_temperature(&temperature);
-return temperature;  
-};
+void Sensor::getTempAndHum() {
+    float temperature, humidity;
+    m_hts221.get_temperature(&temperature);
+    m_hts221.get_humidity(&humidity);
 
-float TempHum::m_getHumidity(){
-hts221.get_humidity(&humidity);
-return humidity;
-};
+    m_tempHumid.mutex.lock();
+    m_tempHumid.temp = temperature;
 
-void TempHum::SensorLoop(){
-    while (true){
-        m_getTemperature();
-        m_getHumidity();
-        thread_sleep_for(5000);  
-    }
-};
+    m_tempHumid.humid = humidity;
+    m_tempHumid.mutex.unlock();
 
+    LOG("Temp: %f",temperature);
+    LOG("Hum: %f", humidity);
+}
