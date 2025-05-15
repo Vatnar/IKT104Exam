@@ -28,7 +28,7 @@ class Program {
     Thread m_displayStartupThread;
     Thread m_displayThread;
 
-    startupStruct m_APIArgs;
+    Datetime m_datetime;
     API m_API;
     Thread m_APIStartupThread;
     Thread m_APIThread;

@@ -12,9 +12,9 @@ void API::connectWiFi() {
   
   // Connect to default network interface
     LINE();
-    net = NetworkInterface::get_default_instance();
-    if (!net) {
-        apiargs.code = NSAPI_ERROR_NO_CONNECTION;
+    m_net = NetworkInterface::get_default_instance();
+    if (!m_net) {
+        m_datetime.code = NSAPI_ERROR_NO_CONNECTION;
         return;
     }
     LOG("[INFO] Successfully got network interface");
@@ -23,7 +23,7 @@ void API::connectWiFi() {
     LINE();
     nsapi_size_or_error_t status  = 0;
     do {
-        status = net->connect();
+        status = m_net->connect();
 
         if (status != NSAPI_ERROR_OK) {
             LOG("[WARN] Couldn't connect to network %d", status);
@@ -31,13 +31,13 @@ void API::connectWiFi() {
     } while (status != NSAPI_ERROR_OK);
     LOG("[INFO] Connected to network");
 
-    address = new SocketAddress;
+    m_address = new SocketAddress;
 
 
     LINE();    
     do {
         LOG("[INFO] Getting local IP...");
-        status = net->get_ip_address(address);
+        status = m_net->get_ip_address(m_address);
 
         if (status != NSAPI_ERROR_OK) {
             LOG("[WARN] Failed to get local I %d", status);
@@ -46,45 +46,45 @@ void API::connectWiFi() {
     while (status != NSAPI_ERROR_OK);
 
     LOG("[INFO] Connected to WLAN and received IP address: %s",
-        address->get_ip_address());
+        m_address->get_ip_address());
     LINE();
 }
 
 void API::connectToHost(TCPSocket &socket, const char *hostname) {
 
 
-    nsapi_size_or_error_t status = socket.open(net);
-     // Uten set_timout blir det kastet en exception før den får koblet seg til.
+    nsapi_size_or_error_t status = socket.open(m_net);
+     
     socket.set_timeout(500);
 
 
         if (status != NSAPI_ERROR_OK) {
         LOG("[WARN] Failed to open TCPSocket: %d", status);
         }
-        // Setter opp TCP sertifikatene som er definert i cert.h
+        
     
     LINE();
 
-    status = net->gethostbyname(hostname, address);
+    status = m_net->gethostbyname(hostname, m_address);
     if (status != 0) {
         LOG("[WARN] gethostbyname(%s) returned: %d", hostname, status);
     }
 
-    LOG("[INFO] IP address of server %s is %s", hostname, address->get_ip_address());
+    LOG("[INFO] IP address of server %s is %s", hostname, m_address->get_ip_address());
 
      if (status != NSAPI_ERROR_OK) {
      LOG("[WARN] DNS resolution failed for %s: %d", hostname, status);
      }
-    address->set_port(80);
+    m_address->set_port(80);
 
 
     LINE();
-    status = socket.connect(*address);
+    status = socket.connect(*m_address);
 
     if (status != NSAPI_ERROR_OK) {
     LOG("[WARN] Failed to connect to %s on port 80: %d", hostname, status);
     socket.close();
-    apiargs.code = status;
+    m_datetime.code = status;
     return;
     }
 
@@ -111,11 +111,11 @@ char* API::getTimezoneData(Socket &socket ) {
     int total_bytes_received = 0;
     int bytes_received = 0;
     int retry_count = 0;
-    const int max_retries = 3; // You can adjust the number of retries
+    const int max_retries = 3; 
 
     while (total_bytes_received < sizeof(buffer) - 1 && (bytes_received = socket.recv(buffer + total_bytes_received, sizeof(buffer) - 1 - total_bytes_received)) > 0) {
         total_bytes_received += bytes_received;
-        retry_count = 0; // Reset retry count on successful reception
+        retry_count = 0; 
     }
 
     if (bytes_received < 0) {
@@ -130,13 +130,13 @@ char* API::getTimezoneData(Socket &socket ) {
         while (retry_count < max_retries) {
             retry_count++;
             LOG("[WARN] No data received, retrying (%d/%d)...", retry_count, max_retries);
-            // Consider adding a delay here to avoid overwhelming the server
-            ThisThread::sleep_for(std::chrono::milliseconds(1000)); // Example delay of 1 second
+        
+            ThisThread::sleep_for(std::chrono::milliseconds(1000)); // to not overwhelm server
 
             bytes_sent = socket.send(request, strlen(request));
             if (bytes_sent < 0) {
                 LOG("[ERROR] Failed to send retry request: %d", bytes_sent);
-                break; // Exit retry loop if send fails
+                break; 
             }
 
             total_bytes_received = 0;
@@ -148,13 +148,13 @@ char* API::getTimezoneData(Socket &socket ) {
             LOG("[INFO] Retry response (%d bytes): %s", total_bytes_received, buffer);
 
             if (total_bytes_received > 0) {
-                break; // Exit retry loop if data is received
+                break; 
             }
         }
         if (total_bytes_received == 0) {
             LOG("[ERROR] Failed to receive data after %d retries.", max_retries);
             socket.close();
-            apiargs.code = NSAPI_ERROR_BUSY; // Or a more appropriate error code
+            m_datetime.code = NSAPI_ERROR_BUSY;
             return nullptr;
         }
     }
@@ -170,21 +170,114 @@ void API::StartUp() {
     char* buffer = getTimezoneData(*socket);
 
     
-    
     json j;
     parseJSON(j, buffer);
 
+    std::string prettyJson = j.dump(4);
+
+    // LOG("[DEBUG] Parsed JSON %s", prettyJson.c_str());
+    
     LOG("[INFO] City: %s", j["location"]["city"].get<std::string>().c_str());
 
 
+    if (j.contains("time_zone") && j["time_zone"].contains("date_time_unix")) {
+      int timestamp = (int)j["time_zone"]["date_time_unix"];
+      int offset = j["time_zone"]["offset"];
 
+        set_time(timestamp);
+        m_datetime.timestamp = timestamp;
+        m_datetime.offset = offset;
+        m_datetime.code = NSAPI_ERROR_OK;
 
-    // Set system time
-    // set_time(timestamp);
-
-    // apiargs.timestamp = timestamp;
-    // apiargs.code = NSAPI_ERROR_OK;
+    } else {
+        LOG("[ERROR] missing keys");
+    }
 }
+
+void API::GetDateTimeByCoordinates(Coordinate coordinate) {
+  TCPSocket *socket = new TCPSocket;
+  connectToHost(*socket, "api.ipgeolocation.io");
+
+
+  
+    const char *api_key = "dd8232f6deda47b7a1bf3eeb2512129d";
+    
+    char request[512];
+    snprintf(request, sizeof(request),
+             "GET /v2/timezone?apiKey=%s&lat=%s&long= HTTP/1.1\r\n"
+             "Host: api.ipgeolocation.io\r\n"
+             "Connection: close\r\n\r\n",
+             api_key, coordinate.latitude, coordinate.longitude);
+    int bytes_sent = socket->send(request, strlen(request));
+    if (bytes_sent < 0) {
+        LOG("[ERROR] Failed to send request: %d", bytes_sent);
+        return;
+    }
+
+    char buffer[2048];
+    int total_bytes_received = 0;
+    int bytes_received = 0;
+    int retry_count = 0;
+    const int max_retries = 3; 
+
+    while (total_bytes_received < sizeof(buffer) - 1 && (bytes_received = socket->recv(buffer + total_bytes_received, sizeof(buffer) - 1 - total_bytes_received)) > 0) {
+        total_bytes_received += bytes_received;
+        retry_count = 0; 
+    }
+
+    if (bytes_received < 0) {
+        LOG("[ERROR] Error receiving data: %d", bytes_received);
+        socket->close();
+        return;
+    }
+
+    buffer[total_bytes_received] = '\0';
+
+    if (total_bytes_received == 0) {
+        while (retry_count < max_retries) {
+            retry_count++;
+            LOG("[WARN] No data received, retrying (%d/%d)...", retry_count, max_retries);
+        
+            ThisThread::sleep_for(std::chrono::milliseconds(1000)); // to not overwhelm server
+
+            bytes_sent = socket->send(request, strlen(request));
+            if (bytes_sent < 0) {
+                LOG("[ERROR] Failed to send retry request: %d", bytes_sent);
+                break; 
+            }
+
+            total_bytes_received = 0;
+            bytes_received = 0;
+            while (total_bytes_received < sizeof(buffer) - 1 && (bytes_received = socket->recv(buffer + total_bytes_received, sizeof(buffer) - 1 - total_bytes_received)) > 0) {
+                total_bytes_received += bytes_received;
+            }
+            buffer[total_bytes_received] = '\0';
+            LOG("[INFO] Retry response (%d bytes): %s", total_bytes_received, buffer);
+
+            if (total_bytes_received > 0) {
+                break; 
+            }
+        }
+        if (total_bytes_received == 0) {
+            LOG("[ERROR] Failed to receive data after %d retries.", max_retries);
+            socket->close();
+            m_datetime.code = NSAPI_ERROR_BUSY;
+            return;
+        }
+    }
+
+    json j;
+    parseJSON(j, buffer);
+
+    int timestamp = (int)j["time_zone"]["date_time_unix"];
+    int offset = j["time_zone"]["offset"];
+
+    set_time(timestamp);
+    m_datetime.timestamp = timestamp;
+    m_datetime.offset = offset;
+    m_datetime.code = NSAPI_ERROR_OK;
+}
+
 
 
 bool API::sanitizeJSON(const std::string& input, std::string& out) {
