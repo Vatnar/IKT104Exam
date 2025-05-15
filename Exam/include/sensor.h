@@ -7,12 +7,12 @@
 
 class Sensor {
 public:
-    Sensor(temphumidstruct &temphum);
+    Sensor(TempHumid &temphum);
     
     void getTempAndHum();
 
 private:
-    temphumidstruct &m_tempHumid;
+    TempHumid &m_tempHumid;
 
     DevI2C m_i2c;
     HTS221Sensor m_hts221;

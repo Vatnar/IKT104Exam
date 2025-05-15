@@ -9,7 +9,7 @@ constexpr bool LOG_ENABLED = true;
 #define LINE() LINE_IF(LOG_ENABLED)
 
 
-Sensor::Sensor(temphumidstruct &temphum) : m_i2c(PB_11, PB_10), m_hts221(&m_i2c), m_tempHumid(temphum) {
+Sensor::Sensor(TempHumid &temphum) : m_i2c(PB_11, PB_10), m_hts221(&m_i2c), m_tempHumid(temphum) {
     m_hts221.enable();
     m_hts221.init(NULL);
     thread_sleep_for(20); 

@@ -6,7 +6,7 @@ class Display
 {
 public:
     void EventLoop();
-    Display(temphumidstruct& tempHumid);   // Constructor tar imot referanse
+    Display(TempHumid & tempHumid);   // Constructor tar imot referanse
 
 private:
     I2C lcdI2C; 
@@ -30,5 +30,5 @@ private:
     void m_scrollText(const std::string& tekst);
 
 
-    temphumidstruct& m_tempHumid;     // Referanse til shared struct
+    TempHumid & m_tempHumid;     // Referanse til shared struct
 };

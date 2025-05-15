@@ -13,7 +13,8 @@ constexpr bool LOG_ENABLED = true;
 #define LINE() LINE_IF(LOG_ENABLED)
 
 
-Program::Program() : m_API(m_datetime), m_sensor(m_tempHumid), m_display(m_tempHumid){
+Program::Program() : m_API(m_datetime, m_weather, m_coordinate), m_sensor(m_tempHumid), m_display(m_tempHumid){
+
   LINE();
   LINE();
   LINE();
@@ -22,9 +23,25 @@ Program::Program() : m_API(m_datetime), m_sensor(m_tempHumid), m_display(m_tempH
   LINE();
 
 
-    m_state = State::STARTUP;   // set initial state
+
     
-    m_datetime = {0};
+    m_state = State::STARTUP;   // set initial state
+    m_datetime.mutex.lock();
+    m_datetime.code = NSAPI_ERROR_NO_MEMORY;
+    m_datetime.offset = 0;
+    m_datetime.timestamp = 0;
+    m_datetime.mutex.unlock();
+
+    m_coordinate.mutex.lock();
+    m_coordinate.latitude = 0;
+    m_coordinate.longitude = 0;
+    m_coordinate.mutex.unlock();
+
+    m_weather.mutex.lock();
+    m_weather.description = "";
+    m_weather.temp = 0.0;
+    m_weather.mutex.unlock();
+
     // Hente unix timestamp tar litt tid så derfor si velkommen eller et eller annet på displayet i mens
     LOG("[INFO] Starting Display thread");
     // Start display event loop
@@ -47,12 +64,20 @@ Program::Program() : m_API(m_datetime), m_sensor(m_tempHumid), m_display(m_tempH
     m_APIStartupThread.join();
     if (m_datetime.code != NSAPI_ERROR_OK){
         LOG("[WARN] Failed to get Timestamp");
+        m_datetime.mutex.lock();
         LOG("[WARN] %d", m_datetime.code);
-    }
-    else {
+        m_datetime.mutex.unlock();
+    } else {
+      m_datetime.mutex.lock();
       LOG("[INFO] Unix Timestamp: %d", m_datetime.timestamp);
       LOG("[INFO] TIMEZONE OFFSET: %d", m_datetime.offset);
+      m_datetime.mutex.unlock();
     }
+
+    
+    m_API.GetDateTimeByCoordinates();
+    LOG("FINISHED GETTING TIME BY COORDINATES");
+    m_API.GetDailyForecastByCoordinates();
     m_state = State::SHOWALARM;
     m_displayThread.flags_set((uint32_t)m_state);
 
@@ -65,7 +90,6 @@ Program::Program() : m_API(m_datetime), m_sensor(m_tempHumid), m_display(m_tempH
     m_input.InputLoop();
     });
 
-    LOG("Program constructed\n");
 }
 
 int Program::ProgramLoop(){
@@ -177,6 +201,7 @@ void Program::editminute(ButtonState &buttonState){
 void Program::temphumid(ButtonState &buttonState){
 
     LOG("STATE: TEMPHUMID\n");
+
 
     m_sensor.getTempAndHum();
 

@@ -5,6 +5,7 @@
 #include "display.h"
 #include "API.h"
 #include "sensor.h"
+#include "structs.h"
 
 
 class Program {
@@ -30,10 +31,14 @@ class Program {
     Thread m_displayThread;
 
 
-    temphumidstruct m_tempHumid;
+    TempHumid m_tempHumid;
     Sensor m_sensor;
 
     Datetime m_datetime;
+    Weather m_weather;
+    Coordinate m_coordinate;
+
+    
     API m_API;
     Thread m_APIStartupThread;
     Thread m_APIThread;

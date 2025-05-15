@@ -11,7 +11,7 @@ constexpr bool LOG_ENABLED = true;
 
 #define LOG(fmt, ...) LOG_IF(LOG_ENABLED, fmt, ##__VA_ARGS__)
 
-Display::Display(temphumidstruct &tempHumid) : lcdI2C(D14, D15), lcd(&lcdI2C), m_tempHumid(tempHumid) {
+Display::Display(TempHumid &tempHumid) : lcdI2C(D14, D15), lcd(&lcdI2C), m_tempHumid(tempHumid) {
     lcd.init();
     thread_sleep_for(80);               // Trenger sleep for å initialisere LCD-displayet
     lcd.clear();
