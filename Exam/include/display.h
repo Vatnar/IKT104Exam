@@ -5,7 +5,6 @@
 class Display
 {
 public:
-
     void EventLoop();
     Display(temphumidstruct& tempHumid);   // Constructor tar imot referanse
 
@@ -13,7 +12,7 @@ private:
     I2C lcdI2C; 
     DFRobot_RGBLCD1602 lcd;
 
-    static constexpr uint32_t FLAG_STOP = 0x80000000;
+   static constexpr uint32_t FLAG_STOP = 1U << 0;
     
     void m_initDisplay();
 

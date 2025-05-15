@@ -4,6 +4,8 @@
 #include "Logger.h"
 #include <string>
 #include "structs.h"
+#include <chrono>
+using namespace std::chrono_literals;
 
 constexpr bool LOG_ENABLED = true;
 
@@ -105,7 +107,7 @@ void Display::m_displayTempHum() {
     float humid = m_tempHumid.humid;
     m_tempHumid.mutex.unlock();
 
-    lcd.printf("Temp: %.1fC", temp);
+    lcd.printf("Temp: %.1f C", temp);
     lcd.setCursor(0, 1);
     lcd.printf("Humid: %.1f%%", humid);
 }
@@ -122,7 +124,7 @@ void Display::m_displayNews() {
     lcd.clear();
     lcd.setCursor(0,0);
     lcd.printf("BBC");
-    //m_scrollText("The past, present and future walked into a bar, it was tense");
+    m_scrollText("The past, present and future walked into a bar, it was tense");
 }
 
 void Display::m_editHour() {
@@ -137,37 +139,43 @@ void Display::m_setLocation() {
     
 }
 
-// Oppdatert m_scrollText med avbrytbar scrolling via EventFlags
-// Forutsetter at FLAG_STOP er deklarert som: static constexpr uint32_t FLAG_STOP = 0x80000000;
-
+// Oppdatert m_scrollText med sømløs looping, padding og 200ms speed
 void Display::m_scrollText(const std::string& text) {
-    const int windowSize = 16;  // antall kolonner
-    const int length = text.length();
+    constexpr size_t windowSize = 16;
+    const size_t length = text.length();
 
-    // Sett cursor til andre linje før visning
-    lcd.setCursor(0, 1);
+    // Padding mellom slutt og start
+    const std::string buffer = text + "        ";
+    const size_t totalLength = buffer.length();
 
-    // Kort tekst: vis uten scrolling
-    if (length <= windowSize) {
-        lcd.printf("%-*s", windowSize, text.c_str());  // fyll med mellomrom
-        return;
-    }
-
-    // Scroll tekst, avbryt ved FLAG_STOP
-    for (int i = 0; i <= length - windowSize; ++i) {
-        // Sjekk om stop-flag er satt før visning
-        if (ThisThread::flags_get() & FLAG_STOP) {
-            ThisThread::flags_clear(FLAG_STOP);
-            return;
+    size_t pos = 0;
+    while (true) {
+        std::string window;
+        if (pos + windowSize <= totalLength) {
+            // Ingen wrapping
+            window = buffer.substr(pos, windowSize);
+        } else {
+            // Wrap around fra slutt til begynnelse
+            size_t firstLen = totalLength - pos;
+            window = buffer.substr(pos, firstLen)
+                   + buffer.substr(0, windowSize - firstLen);
         }
 
+        // Vis vindu
         lcd.setCursor(0, 1);
-        lcd.printf("%.*s", windowSize, text.c_str() + i);
+        lcd.printf("%-*s", windowSize, window.c_str());
 
-        // Vent maks 50 ms, men avbryt umiddelbart om FLAG_STOP settes
-        if (ThisThread::flags_wait_any(FLAG_STOP, 50) & FLAG_STOP) {
+        // Vent 100ms
+        ThisThread::sleep_for(200ms);
+
+        // Avbryt om FLAG_STOP
+        uint32_t flags = ThisThread::flags_get();
+        if (flags & FLAG_STOP) {
             ThisThread::flags_clear(FLAG_STOP);
-            return;
+            break;
         }
+
+        // Neste posisjon
+        pos = (pos + 1) % totalLength;
     }
 }
