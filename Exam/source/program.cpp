@@ -10,16 +10,34 @@ constexpr bool LOG_ENABLED = true;
 #define LINE() LINE_IF(LOG_ENABLED)
 
 
-Program::Program() : m_API(m_APIArgs) {
+Program::Program() : m_API(m_datetime, m_weather, m_coordinate) {
   LINE();
   LINE();
   LINE();
   printf("-----------------------------------------\n");
   printf("             ALARM app                   \n\n");
   LINE();
-    m_state = State::STARTUP;   // set initial state
+
+
+    // Initialization 
     
-    m_APIArgs = {0};
+    m_state = State::STARTUP;   // set initial state
+    m_datetime.mutex.lock();
+    m_datetime.code = NSAPI_ERROR_NO_MEMORY;
+    m_datetime.offset = 0;
+    m_datetime.timestamp = 0;
+    m_datetime.mutex.unlock();
+
+    m_coordinate.mutex.lock();
+    m_coordinate.latitude = 0;
+    m_coordinate.longitude = 0;
+    m_coordinate.mutex.unlock();
+
+    m_weather.mutex.lock();
+    m_weather.description = "";
+    m_weather.temp = 0.0;
+    m_weather.mutex.unlock();
+
     // Hente unix timestamp tar litt tid så derfor si velkommen eller et eller annet på displayet i mens
     LOG("[INFO] Starting Display thread");
     // Start display event loop
@@ -40,14 +58,22 @@ Program::Program() : m_API(m_APIArgs) {
      LOG("[INFO] Waiting for API startup to finish");
      
     m_APIStartupThread.join();
-    if (m_APIArgs.code != NSAPI_ERROR_OK){
+    if (m_datetime.code != NSAPI_ERROR_OK){
         LOG("[WARN] Failed to get Timestamp");
-        LOG("[WARN] %d", m_APIArgs.code);
+        m_datetime.mutex.lock();
+        LOG("[WARN] %d", m_datetime.code);
+        m_datetime.mutex.unlock();
+    } else {
+      m_datetime.mutex.lock();
+      LOG("[INFO] Unix Timestamp: %d", m_datetime.timestamp);
+      LOG("[INFO] TIMEZONE OFFSET: %d", m_datetime.offset);
+      m_datetime.mutex.unlock();
     }
-    else {
-      LOG("[INFO] Unix Timestamp: %d", m_APIArgs.timestamp);
-      LOG("[INFO] TIMEZONE OFFSET: %d", m_APIArgs.offset);
-    }
+
+    
+    m_API.GetDateTimeByCoordinates();
+    LOG("FINISHED GETTING TIME BY COORDINATES");
+    m_API.GetDailyForecastByCoordinates();
     m_state = State::SHOWALARM;
     m_displayThread.flags_set((uint32_t)m_state);
 
@@ -171,6 +197,7 @@ void Program::editminute(ButtonState &buttonState){
 
 void Program::temphumid(ButtonState &buttonState){
     LOG("STATE: TEMPHUMID\n");
+
 
     // TODO send to display
     // m_displayThread.flags_set(uint32_t(State::TEMPHUMID));

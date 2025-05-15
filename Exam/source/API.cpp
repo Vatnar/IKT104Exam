@@ -12,9 +12,9 @@ void API::connectWiFi() {
   
   // Connect to default network interface
     LINE();
-    net = NetworkInterface::get_default_instance();
-    if (!net) {
-        datetime.code = NSAPI_ERROR_NO_CONNECTION;
+    m_net = NetworkInterface::get_default_instance();
+    if (!m_net) {
+        m_datetime.code = NSAPI_ERROR_NO_CONNECTION;
         return;
     }
     LOG("[INFO] Successfully got network interface");
@@ -23,7 +23,7 @@ void API::connectWiFi() {
     LINE();
     nsapi_size_or_error_t status  = 0;
     do {
-        status = net->connect();
+        status = m_net->connect();
 
         if (status != NSAPI_ERROR_OK) {
             LOG("[WARN] Couldn't connect to network %d", status);
@@ -31,13 +31,13 @@ void API::connectWiFi() {
     } while (status != NSAPI_ERROR_OK);
     LOG("[INFO] Connected to network");
 
-    address = new SocketAddress;
+    m_address = new SocketAddress;
 
 
     LINE();    
     do {
         LOG("[INFO] Getting local IP...");
-        status = net->get_ip_address(address);
+        status = m_net->get_ip_address(m_address);
 
         if (status != NSAPI_ERROR_OK) {
             LOG("[WARN] Failed to get local I %d", status);
@@ -46,14 +46,14 @@ void API::connectWiFi() {
     while (status != NSAPI_ERROR_OK);
 
     LOG("[INFO] Connected to WLAN and received IP address: %s",
-        address->get_ip_address());
+        m_address->get_ip_address());
     LINE();
 }
 
 void API::connectToHost(TCPSocket &socket, const char *hostname) {
 
 
-    nsapi_size_or_error_t status = socket.open(net);
+    nsapi_size_or_error_t status = socket.open(m_net);
      
     socket.set_timeout(500);
 
@@ -65,33 +65,33 @@ void API::connectToHost(TCPSocket &socket, const char *hostname) {
     
     LINE();
 
-    status = net->gethostbyname(hostname, address);
+    status = m_net->gethostbyname(hostname, m_address);
     if (status != 0) {
         LOG("[WARN] gethostbyname(%s) returned: %d", hostname, status);
     }
 
-    LOG("[INFO] IP address of server %s is %s", hostname, address->get_ip_address());
+    LOG("[INFO] IP address of server %s is %s", hostname, m_address->get_ip_address());
 
      if (status != NSAPI_ERROR_OK) {
      LOG("[WARN] DNS resolution failed for %s: %d", hostname, status);
      }
-    address->set_port(80);
+    m_address->set_port(80);
 
 
     LINE();
-    status = socket.connect(*address);
+    status = socket.connect(*m_address);
 
     if (status != NSAPI_ERROR_OK) {
     LOG("[WARN] Failed to connect to %s on port 80: %d", hostname, status);
     socket.close();
-    datetime.code = status;
+    m_datetime.code = status;
     return;
     }
 
     LOG("Successfully connected to %s", hostname);
 }
 
-char* API::getTimezoneData(Socket &socket ) {
+std::string API::getTimezoneData(Socket &socket ) {
   // TODO Perhaps put in env for code style
     const char *api_key = "dd8232f6deda47b7a1bf3eeb2512129d";
 
@@ -154,66 +154,101 @@ char* API::getTimezoneData(Socket &socket ) {
         if (total_bytes_received == 0) {
             LOG("[ERROR] Failed to receive data after %d retries.", max_retries);
             socket.close();
-            datetime.code = NSAPI_ERROR_BUSY;
+            m_datetime.code = NSAPI_ERROR_BUSY;
             return nullptr;
         }
     }
-    return buffer;
+    return std::string(buffer, total_bytes_received);
 }
+
 
 void API::StartUp() {
     connectWiFi();
 
     // New socket for use with host
-    TCPSocket *socket = new TCPSocket;
+    std::unique_ptr<TCPSocket> socket = std::make_unique<TCPSocket>();
+
     connectToHost(*socket, "api.ipgeolocation.io");
-    char* buffer = getTimezoneData(*socket);
+    std::string  buffer = getTimezoneData(*socket);
 
     
     json j;
-    parseJSON(j, buffer);
-
-    std::string prettyJson = j.dump(4);
-
-    // LOG("[DEBUG] Parsed JSON %s", prettyJson.c_str());
-    
-    LOG("[INFO] City: %s", j["location"]["city"].get<std::string>().c_str());
+    parseJSON(j, buffer.c_str());
 
 
-    if (j.contains("time_zone") && j["time_zone"].contains("date_time_unix")) {
-      int timestamp = (int)j["time_zone"]["date_time_unix"];
-      int offset = j["time_zone"]["offset"];
 
-        set_time(timestamp);
-        datetime.timestamp = timestamp;
-        datetime.offset = offset;
-        datetime.code = NSAPI_ERROR_OK;
 
+    LOG("About to extract info startup");
+
+
+    m_datetime.mutex.lock();
+    if (j.contains("time_zone") &&
+        j["time_zone"].contains("date_time_unix")) {
+        m_datetime.timestamp = (int)j["time_zone"]["date_time_unix"];
+        m_datetime.code = NSAPI_ERROR_OK;
     } else {
-        LOG("[ERROR] missing keys");
+        LOG("[ERROR] Missing timezone/unix in JSON");
+        m_datetime.code = NSAPI_ERROR_PARAMETER;
     }
+
+    if (j.contains("time_zone") &&
+        j["time_zone"].contains("offset")) {
+        m_datetime.timestamp = j["time_zone"]["offset"];
+    } else {
+        LOG("[ERROR] MIssing timezone/offset in JSON");
+        m_datetime.code = NSAPI_ERROR_PARAMETER;
+    }
+    m_datetime.mutex.unlock();
+
+    LOG("Got time info");
+    
+    m_coordinate.mutex.lock();
+    if (j.contains("location") && j["location"].contains("longitude")) {
+        m_coordinate.longitude = j["location"]["longitude"];
+    } else {
+      LOG("[ERROR] Missing location/longitude in JSON");
+    }
+
+    if (j.contains("location") && j["location"].contains("latitude")) {
+        m_coordinate.latitude = j["location"]["latitude"];
+    } else {
+    LOG("[ERROR] Missing location/latitude in JSON");
+    }
+    LOG("long: %f, lat %f", m_coordinate.longitude, m_coordinate.latitude);
+
+    m_coordinate.mutex.unlock();
+    LOG("Got Location info");
+
+    socket->close();
 }
 
-void API::GetDateTimeByCoordinates(Coordinate coordinate) {
-  TCPSocket *socket = new TCPSocket;
+void API::GetDateTimeByCoordinates() {
+  std::unique_ptr<TCPSocket> socket = std::make_unique<TCPSocket>();
   connectToHost(*socket, "api.ipgeolocation.io");
 
 
   
     const char *api_key = "dd8232f6deda47b7a1bf3eeb2512129d";
-    
+
     char request[512];
+
+
+    m_coordinate.mutex.lock();
+    LOG("BEFORE HTTP REQUEST");
     snprintf(request, sizeof(request),
-             "GET /v2/timezone?apiKey=%s&lat=%s&long= HTTP/1.1\r\n"
+             "GET /v2/timezone?apiKey=%s&lat=%f&long=%f HTTP/1.1\r\n"
              "Host: api.ipgeolocation.io\r\n"
              "Connection: close\r\n\r\n",
-             api_key, coordinate.latitude, coordinate.longitude);
+             api_key, m_coordinate.latitude, m_coordinate.longitude);
+    m_coordinate.mutex.unlock();
+    
     int bytes_sent = socket->send(request, strlen(request));
     if (bytes_sent < 0) {
         LOG("[ERROR] Failed to send request: %d", bytes_sent);
         return;
     }
 
+    LOG("BEFORE RECEIVE");
     char buffer[2048];
     int total_bytes_received = 0;
     int bytes_received = 0;
@@ -261,22 +296,83 @@ void API::GetDateTimeByCoordinates(Coordinate coordinate) {
         if (total_bytes_received == 0) {
             LOG("[ERROR] Failed to receive data after %d retries.", max_retries);
             socket->close();
-            datetime.code = NSAPI_ERROR_BUSY;
+            m_datetime.code = NSAPI_ERROR_BUSY;
             return;
         }
     }
+    socket->close();
 
+    LOG("BEFORE JSON");
     json j;
     parseJSON(j, buffer);
 
     int timestamp = (int)j["time_zone"]["date_time_unix"];
+    LOG("%d", timestamp);
     int offset = j["time_zone"]["offset"];
+    LOG("%d", offset);
 
     set_time(timestamp);
-    datetime.timestamp = timestamp;
-    datetime.offset = offset;
-    datetime.code = NSAPI_ERROR_OK;
+    m_datetime.timestamp = timestamp;
+    m_datetime.offset = offset;
+    m_datetime.code = NSAPI_ERROR_OK;
+
+    LOG("Finished");
 }
+
+void API::GetDailyForecastByCoordinates() {
+
+    LOG("New socket for forecast");
+    std::unique_ptr<TCPSocket> socket = std::make_unique<TCPSocket>();
+    connectToHost(*socket, "api.openweathermap.org");
+
+    const char *api_key = "9a370cb3212a5d999fb46e975d41bd72";
+
+    char request[512];
+
+    m_coordinate.mutex.lock();
+    snprintf(request, sizeof(request),
+             "GET /data/2.5/weather?lat=%f&lon=%f&appid=%s HTTP/1.1\r\n"
+             "Host: api.openweathermap.org\r\n"
+             "Connection: close\r\n\r\n",
+             m_coordinate.latitude, m_coordinate.longitude, api_key);
+    m_coordinate.mutex.unlock();
+
+    int bytes_sent = socket->send(request, strlen(request));
+    if (bytes_sent < 0) {
+        LOG("[ERROR] Failed to send request: %d", bytes_sent);
+        return;
+    }
+
+    char buffer[8192];
+    int total_bytes_received = 0;
+    int bytes_received = 0;
+
+    while (total_bytes_received < sizeof(buffer) - 1 &&
+           (bytes_received = socket->recv(buffer + total_bytes_received,
+                                          sizeof(buffer) - 1 - total_bytes_received)) > 0) {
+        total_bytes_received += bytes_received;
+    }
+
+    if (bytes_received < 0 || total_bytes_received == 0) {
+        LOG("[ERROR] Failed to receive data.");
+        socket->close();
+        return;
+    }
+
+    buffer[total_bytes_received] = '\0';
+
+    json j;
+    parseJSON(j, buffer);
+
+    std::string description = j["weather"][0]["description"];
+    float temp_day = j["temp"]["day"];
+
+    LOG("Day Temp: %.1f°C", temp_day);
+    LOG("Weather: %s", description.c_str());
+
+    socket->close();
+}
+
 
 
 
@@ -303,7 +399,7 @@ bool API::sanitizeJSON(const std::string& input, std::string& out) {
     return false; 
 }
 
-void API::parseJSON(json &j, char *buffer) {
+void API::parseJSON(json &j, const char *buffer) {
 
     std::string b = buffer;
     std::string s;
@@ -311,5 +407,12 @@ void API::parseJSON(json &j, char *buffer) {
       LOG("[WARN] coulndt get balanced block");
       return;
     }
+    LOG("Sanitized: %s", s.c_str() );
     j = json::parse(s);
+    LOG("Parsed");
+}
+
+API::~API() {
+  delete m_address;
+
 }

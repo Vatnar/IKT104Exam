@@ -28,7 +28,11 @@ class Program {
     Thread m_displayStartupThread;
     Thread m_displayThread;
 
-    Datetime m_APIArgs;
+    Datetime m_datetime;
+    Weather m_weather;
+    Coordinate m_coordinate;
+
+    
     API m_API;
     Thread m_APIStartupThread;
     Thread m_APIThread;
