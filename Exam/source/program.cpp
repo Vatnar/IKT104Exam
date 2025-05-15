@@ -14,6 +14,7 @@ constexpr bool LOG_ENABLED = true;
 
 
 Program::Program() : m_API(m_datetime, m_weather, m_coordinate), m_sensor(m_tempHumid), m_display(m_tempHumid){
+
   LINE();
   LINE();
   LINE();
