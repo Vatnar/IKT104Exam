@@ -189,7 +189,11 @@ void Display::m_editMinute() {
 }
 
 void Display::m_setLocation() {
-    
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.printf("%s", m_tlc.latitude.c_str());
+    lcd.setCursor(0, 1);
+    lcd.printf("%s", m_tlc.longitude.c_str());
 }
 
 // Oppdatert m_scrollText med sømløs looping, padding og 200ms speed
