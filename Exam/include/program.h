@@ -6,7 +6,7 @@
 #include "API.h"
 #include "sensor.h"
 #include "structs.h"
-#include "alarm2.h"
+#include "alarm.h"
 
 
 class Program {
@@ -47,4 +47,10 @@ class Program {
     Input m_input;
     Thread m_inputThread;
 
+
+
+
+    Timeout m_alarmTimeout;
+
+    bool timedOut = false;
 };

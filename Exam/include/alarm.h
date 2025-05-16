@@ -10,13 +10,14 @@ public:
     using clock      = std::chrono::system_clock;
     using time_point = clock::time_point;
 
-    AlarmManager(AlarmData& alarmData, PinName buzzerPin);
+    AlarmManager(AlarmData& alarmData, Timeout &alarm);
 
     // Starter alarm­-scheduling
     void start();
 
     // Sett alarmtid
     void setTime(int h, int m);
+
     // Slå alarm på/av
     void enable();
     void disable();
@@ -25,9 +26,6 @@ public:
     void snooze();
     void mute();
 
-    // Callbacks
-    void onTrigger(std::function<void()> cb);
-    void onStop   (std::function<void()> cb);
 
     // Spørringer
     bool isActive()   const;
@@ -37,16 +35,16 @@ public:
 
     void triggerAlarm();
 
+        void autoMute();
+    void scheduleNextAlarm();
 
-
-private:
-    void autoMute();
-    void scheduleNextTrigger();
-
-    AlarmData&      m_alarmData;
+    AlarmData      &m_alarmData;
     Timeout         m_triggerTimeout, m_muteTimeout, m_snoozeTimeout;
+
+
+    Timeout &m_alarm;
     PwmOut          m_buzzer;
 
-    std::function<void()> _cbTrigger;
-    std::function<void()> _cbStop;
+private:
+
 };

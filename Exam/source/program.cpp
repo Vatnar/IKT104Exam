@@ -6,7 +6,6 @@
 #include "structs.h"
 #include "sensor.h"
 #include "Display.h"
-#include "alarm2.h"
 
 constexpr bool LOG_ENABLED = true;
 
@@ -104,6 +103,12 @@ int Program::ProgramLoop(){
         // Wait for button input, or interrupt from alarm.
         // Then handle the input based on what the current state is.
         
+        if (timedOut){
+            LOG("[INFO] Alarm timed out");
+        }
+
+
+
         flags = ThisThread::flags_wait_any(ANYBUTTONSTATE);
         if (flags < 0) {
             LOG("[Error] osThreadFlagsWait returned error: 0x%08x\n", (uint32_t)flags);
