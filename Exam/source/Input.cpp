@@ -3,7 +3,7 @@
 #include <mbed.h>
 #include "Logger.h"
 
-constexpr bool LOG_ENABLED = false;
+constexpr bool LOG_ENABLED = true;
 
 #define LOG(fmt, ...) LOG_IF(LOG_ENABLED, fmt, ##__VA_ARGS__)
 
@@ -18,8 +18,6 @@ void Input::InputLoop() {
     while (true) {
         if (!m_left.read()) {
             LOG("LEFT\n");
-            LOG("thread ID: %p\n", (void*)ThisThread::get_id());
-            LOG("m_programThreadID: %p\n", m_programThreadId);
             auto result = osThreadFlagsSet(m_programThreadId, uint32_t(ButtonState::LEFT));
             if (int32_t(result) < 0) {
                 LOG("Error setting LEFT flag: 0x%08X\n", result);

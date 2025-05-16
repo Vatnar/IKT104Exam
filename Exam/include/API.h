@@ -17,24 +17,28 @@ public:
 // Fetches Unix timestamp and location + timezone and returns them in apiargs
   void StartUp();
 
-  API(Datetime &datetime, Weather &weather, Coordinate &coordinate)
+  API(Datetime &datetime, Weather &weather, Location &coordinate, RSSStream &rssstream)
       : m_datetime(datetime), m_weather(weather),
-        m_coordinate(coordinate){};
+        m_location(coordinate), m_rssstream(rssstream){};
   ~API();
   void GetDateTimeByCoordinates();
   void GetDailyForecastByCoordinates();
+  void GetRSS();
 
 private:
   NetworkInterface *m_net = nullptr;
   SocketAddress *m_address = nullptr;
+
   Datetime &m_datetime;
   Weather &m_weather;
-  Coordinate &m_coordinate;
+  Location &m_location;
+  RSSStream &m_rssstream;
 
   void connectWiFi();
   void connectToHost(TCPSocket &socket, const char *hostname);
   std::string getTimezoneData(Socket &socket);
 
+  
   void parseJSON(json &j, const char *buffer);
   bool sanitizeJSON(const std::string& input, std::string& out);
 };

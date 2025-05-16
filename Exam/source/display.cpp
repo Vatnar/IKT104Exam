@@ -11,15 +11,20 @@ constexpr bool LOG_ENABLED = true;
 
 #define LOG(fmt, ...) LOG_IF(LOG_ENABLED, fmt, ##__VA_ARGS__)
 
-Display::Display(TempHumid &tempHumid/*, Datetime &datetime, Weather &weather, Coordinate &coordinate*/)
-: lcdI2C(D14, D15), lcd(&lcdI2C), m_tempHumid(tempHumid)/*, m_datetime(datetime), m_weather(weather), m_coordinate(coordinate)*/ {
-    
-    lcd.init();
-    thread_sleep_for(80);               // Trenger sleep for å initialisere LCD-displayet
-    lcd.clear();
-    lcd.display();
+Display::Display(TempHumid & tempHumid, Location & coordinate,
+        Datetime & datetime, Weather &weather, RSSStream &rssstream, TempLocationChange &tlc): lcdI2C(D14, D15), lcd( & lcdI2C),
+         m_tempHumid(tempHumid), m_location(coordinate), m_datetime(datetime), m_weather(weather), m_rssstream(rssstream), m_tlc(tlc) {
+        lcd.init();
+        thread_sleep_for(80); // Trenger sleep for å initialisere LCD-displayet
+        lcd.clear();
+        lcd.display();
+    }
+    void Display::SetThreadPointer(std::unique_ptr<Thread> thread) {
+      m_threadPtr = nullptr;
+      LOG("SET NULLPTR");
+      m_threadPtr = std::move(thread);
+      LOG("SET VARIABLE");
 }
-
 void Display::EventLoop() {
     State state = State::STARTUP;                // Instansierer State-klassen
     int32_t flags = 0;
@@ -27,7 +32,6 @@ void Display::EventLoop() {
     while (true) {
 
         LOG("[Info] Current display state %d", state);
-
         flags = ThisThread::flags_wait_any(ANYSTATE);
         if (flags < 0) {
             LOG("[Error] osThreadFlagsWait returned error: 0x%08x\n", (uint32_t)flags);
@@ -39,10 +43,19 @@ void Display::EventLoop() {
             continue;
         }
 
-        state = static_cast<State>(flags);
-        switch (state) {
+        if (m_threadPtr) {
+            LOG("[DEBUG] Stopping existing thread due to state change");
+            m_threadPtr->flags_set(FLAG_STOP);
+            m_threadPtr->join();
+            m_threadPtr.reset();
+        }
+
+state = static_cast<State>(flags);
+switch (state) {
             case State::STARTUP:        m_displayStartup();     break;
             case State::SHOWALARM:      m_displayAlarm();       break;
+            //TODO tror datetime skal vises konstant på toppen - Peter
+            // case State::DATETIME:       m_displayDateTime();    break;
             case State::EDITENABLED:    m_editEnabled();        break;
             case State::TEMPHUMID:      m_displayTempHum();     break;
             case State::WEATHER:        m_displayWeather();     break;
@@ -55,20 +68,33 @@ void Display::EventLoop() {
 }
 
 void Display::m_displayStartup() {
-    
+
+    LOG("[DEBUG] DISPLAYING STARTUP");
+    // Unix epoch time
     lcd.setCursor(0,0);
     lcd.printf("Unix epoch time:");
     lcd.setCursor(0, 1);
-    lcd.printf("1234567890");
+  // Må vente på at startuppen er ferdig først
+
+    m_datetime.mutex.lock();
+    lcd.printf("%d", m_datetime.timestamp);
+    m_datetime.mutex.unlock();
+
+    // Dette må synkroniseres med API-en er ikke noe vits med unødvendig downtime, 
     ThisThread::sleep_for(2s);
     
+    // Latitude longitude
     lcd.clear();
-    lcd.setCursor(0,0);
-    lcd.printf("Lat: 58.3405");
+    lcd.setCursor(0, 0);
+    m_location.mutex.lock();
+    lcd.printf("Lat: %f", m_location.latitude);
     lcd.setCursor(0, 1);
-    lcd.printf("Lon:  8.5934");
+    lcd.printf("Lon:  %f", m_location.longitude);
+    m_location.mutex.unlock();
+    
     ThisThread::sleep_for(2s);
 
+    // City
     lcd.clear();
     lcd.setCursor(0,0);
     lcd.printf("City:");
@@ -77,79 +103,102 @@ void Display::m_displayStartup() {
     ThisThread::sleep_for(2s);
 }
 
-// TODO Få inn day, date, month og time
 void Display::m_displayAlarm() {
-    
-    m_tempHumid.mutex.lock(); // Lås mutex for å lese sikkert
-    float temp = m_tempHumid.temp;
-    float humid = m_tempHumid.humid;
-    m_tempHumid.mutex.unlock();
-
+    LOG("[DEBUG] DISPLAYING ALARM");
     lcd.clear();
     lcd.setCursor(0,0);
-    //lcd.printf("%s %d %s %s", day, date, month, time);
+    lcd.printf("Alarm      7:30");
     lcd.setCursor(0, 1);
     lcd.printf("---------------");
 }
 
-// TODO Fikse
+void Display::m_displayDateTime() {
+    
+}
+
 void Display::m_editEnabled() {
 
 }
 
 void Display::m_displayTempHum() {
+    LOG("[DEBUG] DISPLAYING TEMPHUM");
+    lcd.clear();
+    lcd.setCursor(0,0);
+
+    ThisThread::sleep_for(1s);
+    if (m_threadPtr) {
+        if (m_threadPtr->get_state() != Thread::Deleted) {
+            LOG("[DEBUG] Joining sensor thread in Display");
+            m_threadPtr->join();
+        } else {
+            LOG("[DEBUG] Sensor thread already deleted");
+        }
+        m_threadPtr.reset(); // Ensure the pointer is reset after joining (or if already deleted)
+    } else {
+        LOG("[DEBUG] No sensor thread to join in Display");
+    }
 
     m_tempHumid.mutex.lock(); // Lås mutex for å lese sikkert
     float temp = m_tempHumid.temp;
     float humid = m_tempHumid.humid;
     m_tempHumid.mutex.unlock();
-    
-    lcd.clear();
-    lcd.setCursor(0,0);
+
     lcd.printf("Temp: %.1f C", temp);
     lcd.setCursor(0, 1);
     lcd.printf("Humid: %.1f%%", humid);
 }
 
 void Display::m_displayWeather() {
-    
-    /*m_weather.mutex.lock(); // Lås mutex for å lese sikkert
-    std::string description = m_weather.description;
-    float temperature = m_weather.temp;
-    m_weather.mutex.unlock();
-    
     lcd.clear();
     lcd.setCursor(0,0);
-    lcd.printf("%s", description.c_str());
+    
+    m_weather.mutex.lock();
+    lcd.printf("%s", m_weather.description.c_str());
     lcd.setCursor(0, 1);
-    lcd.printf("%f degrees", temperature);*/
+    lcd.printf("%.1f degrees C", m_weather.temp);
+    m_weather.mutex.unlock();
 }
 
-// TODO Få inn RSS
 void Display::m_displayNews() {
-    lcd.clear();
-    lcd.setCursor(0,0);
+      lcd.clear();
+    lcd.setCursor(0, 0);
     lcd.printf("BBC");
-    m_scrollText("The past, present and future walked into a bar, it was tense");
+
+    if (m_threadPtr) {
+        LOG("[DEBUG] Sending stop flag to scroll thread");
+        m_threadPtr->flags_set(FLAG_STOP);
+        m_threadPtr->join();
+        m_threadPtr.reset();
+    }
+
+    std::string message = "The past, present and future walked into a bar, it was tense";
+    auto newThread = std::make_unique<Thread>();
+    newThread->start([this] {
+        this->m_scrollText();
+    });
+
+    SetThreadPointer(std::move(newThread));
 }
 
-// TODO Fikse
 void Display::m_editHour() {
 
 }
 
-// TODO Fikse
 void Display::m_editMinute() {
 
 }
 
-// TODO Fikse
 void Display::m_setLocation() {
-    
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.printf("%s", m_tlc.latitude.c_str());
+    lcd.setCursor(0, 1);
+    lcd.printf("%s", m_tlc.longitude.c_str());
 }
 
 // Oppdatert m_scrollText med sømløs looping, padding og 200ms speed
-void Display::m_scrollText(const std::string& text) {
+void Display::m_scrollText() {
+    std::string text = m_rssstream.rss;
     constexpr size_t windowSize = 16;
     const size_t length = text.length();
 
