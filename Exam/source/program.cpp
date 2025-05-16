@@ -262,7 +262,7 @@ void Program::locright() {
     LOG("%s", m_tlc.latitudeChanging ? m_tlc.latitude.c_str() : m_tlc.longitude.c_str());
 
     // Switch if at end
-    if ((m_tlc.latitudeChanging && m_tlc.pos == m_tlc.latitude.size()) || (!m_tlc.latitudeChanging && m_tlc.pos == m_tlc.longitude.size())) {
+    if ((m_tlc.latitudeChanging && m_tlc.pos == m_tlc.latitude.size()-1) || (!m_tlc.latitudeChanging && m_tlc.pos == m_tlc.longitude.size()-1)) {
       m_tlc.latitudeChanging = !m_tlc.latitudeChanging;
       m_tlc.pos = 0;
       return;
