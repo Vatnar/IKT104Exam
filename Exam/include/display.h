@@ -6,7 +6,7 @@ class Display
 {
 public:
     void EventLoop();
-    Display(TempHumid & tempHumid, Location &coordinate, Datetime &datetime, Weather &weather);   // Constructor tar imot referanse
+    Display(TempHumid & tempHumid, Location &coordinate, Datetime &datetime, Weather &weather, RSSStream &rssstream);   // Constructor tar imot referanse
     void SetThreadPointer(std::unique_ptr<Thread> thread); // Needed since display is instantiated at the same time as thread.
 private:
     I2C lcdI2C; 
@@ -27,7 +27,7 @@ private:
     void m_editMinute();
     void m_setLocation();
 
-    void m_scrollText(const std::string& tekst);
+    void m_scrollText();
 
 
     std::unique_ptr<Thread> m_threadPtr; // Needed to move ownership
@@ -36,4 +36,5 @@ private:
     Location &m_location;
     Datetime &m_datetime;
     Weather &m_weather;
+    RSSStream &m_rssstream;
 };

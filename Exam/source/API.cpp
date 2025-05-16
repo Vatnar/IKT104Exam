@@ -1,6 +1,7 @@
 #include "API.h"
 #include "Logger.h"
 #include "json.hpp"
+#include <ios>
 constexpr bool LOG_ENABLED = true;
 
 #define LOG(fmt, ...) LOG_IF(LOG_ENABLED, fmt, ##__VA_ARGS__)
@@ -349,10 +350,8 @@ void API::GetDateTimeByCoordinates() {
 
 void API::GetDailyForecastByCoordinates() {
 
-    LOG("DID THIS");
     std::unique_ptr<TCPSocket> socket = std::make_unique<TCPSocket>();
     connectToHost(*socket, "api.openweathermap.org");
-    LOG("DID THIS");
 
     const char *api_key = "9a370cb3212a5d999fb46e975d41bd72";
 
@@ -364,14 +363,12 @@ void API::GetDailyForecastByCoordinates() {
              "Connection: close\r\n\r\n",
              m_location.latitude, m_location.longitude, api_key);
     m_location.mutex.unlock();
-    LOG("DID THIS");
 
     int bytes_sent = socket->send(request, strlen(request));
     if (bytes_sent < 0) {
         LOG("[ERROR] Failed to send request: %d", bytes_sent);
         return;
     }
-    LOG("DID THIS");
 
     char buffer[8192];
     int total_bytes_received = 0;
@@ -383,13 +380,11 @@ void API::GetDailyForecastByCoordinates() {
         total_bytes_received += bytes_received;
     }
     LOG("DID THIS");
-
     if (bytes_received < 0 || total_bytes_received == 0) {
         LOG("[ERROR] Failed to receive data.");
         socket->close();
         return;
     }
-    LOG("DID THIS");
 
     buffer[total_bytes_received] = '\0';
 
@@ -403,6 +398,11 @@ void API::GetDailyForecastByCoordinates() {
     LOG("[info] Weather: %s, temp: %f", description.c_str(), temp);
     LOG("DID THIS");
 
+    m_weather.mutex.lock();
+    m_weather.description = description;
+    m_weather.temp = temp;
+    m_weather.mutex.unlock();
+
 
     socket->close();
 }
@@ -411,6 +411,7 @@ void API::GetRSS() {
     std::unique_ptr<TCPSocket> socket = std::make_unique<TCPSocket>();
     connectToHost(*socket, "rss.cnn.com");
 
+    LOG("YES");
     const char *request = "GET /rss/cnn_topstories.rss HTTP/1.1\r\n"
                           "Host: rss.cnn.com\r\n"
                           "Connection: close\r\n\r\n";
@@ -420,7 +421,7 @@ void API::GetRSS() {
         LOG("[ERROR] Failed to send request: %d", bytes_sent);
         return;
     }
-
+    LOG("YES");
     std::string recv_buffer;    
     std::string result;         
     int story_count = 0;
@@ -461,7 +462,7 @@ void API::GetRSS() {
 
         if (story_count >= 3) break; 
     }
-
+    LOG("YES");
     if (bytes_received < 0) {
         LOG("[ERROR] Error receiving data: %d", bytes_received);
         socket->close();
@@ -471,7 +472,7 @@ void API::GetRSS() {
     m_rssstream.mutex.lock();
     m_rssstream.rss = std::move(result);
     m_rssstream.mutex.unlock();
-
+LOG("YES");
     socket->close();
 }
 

@@ -12,8 +12,8 @@ constexpr bool LOG_ENABLED = true;
 #define LOG(fmt, ...) LOG_IF(LOG_ENABLED, fmt, ##__VA_ARGS__)
 
 Display::Display(TempHumid & tempHumid, Location & coordinate,
-        Datetime & datetime, Weather &weather): lcdI2C(D14, D15), lcd( & lcdI2C),
-         m_tempHumid(tempHumid), m_location(coordinate), m_datetime(datetime), m_weather(weather) {
+        Datetime & datetime, Weather &weather, RSSStream &rssstream): lcdI2C(D14, D15), lcd( & lcdI2C),
+         m_tempHumid(tempHumid), m_location(coordinate), m_datetime(datetime), m_weather(weather), m_rssstream(rssstream) {
         lcd.init();
         thread_sleep_for(80); // Trenger sleep for å initialisere LCD-displayet
         lcd.clear();
@@ -43,8 +43,15 @@ void Display::EventLoop() {
             continue;
         }
 
-        state = static_cast<State>(flags);
-        switch (state) {
+        if (m_threadPtr) {
+            LOG("[DEBUG] Stopping existing thread due to state change");
+            m_threadPtr->flags_set(FLAG_STOP);
+            m_threadPtr->join();
+            m_threadPtr.reset();
+        }
+
+state = static_cast<State>(flags);
+switch (state) {
             case State::STARTUP:        m_displayStartup();     break;
             case State::SHOWALARM:      m_displayAlarm();       break;
             //TODO tror datetime skal vises konstant på toppen - Peter
@@ -144,33 +151,33 @@ void Display::m_displayTempHum() {
 void Display::m_displayWeather() {
     lcd.clear();
     lcd.setCursor(0,0);
-
-    ThisThread::sleep_for(1s);
-    if (m_threadPtr) {
-        if (m_threadPtr->get_state() != Thread::Deleted) {
-            LOG("[DEBUG] Joining weather thread in Display");
-            m_threadPtr->join();
-        } else {
-            LOG("[DEBUG] Sensor weather already deleted");
-        }
-        m_threadPtr.reset(); // Ensure the pointer is reset after joining (or if already deleted)
-    } else {
-        LOG("[DEBUG] No weather to join in Display");
-    }
     
-
     m_weather.mutex.lock();
     lcd.printf("%s", m_weather.description.c_str());
     lcd.setCursor(0, 1);
-    lcd.printf("%d degrees C", m_weather.temp);
-    m_weather.mutex.lock();
+    lcd.printf("%.1f degrees C", m_weather.temp);
+    m_weather.mutex.unlock();
 }
 
 void Display::m_displayNews() {
-    lcd.clear();
-    lcd.setCursor(0,0);
+      lcd.clear();
+    lcd.setCursor(0, 0);
     lcd.printf("BBC");
-    m_scrollText("The past, present and future walked into a bar, it was tense");
+
+    if (m_threadPtr) {
+        LOG("[DEBUG] Sending stop flag to scroll thread");
+        m_threadPtr->flags_set(FLAG_STOP);
+        m_threadPtr->join();
+        m_threadPtr.reset();
+    }
+
+    std::string message = "The past, present and future walked into a bar, it was tense";
+    auto newThread = std::make_unique<Thread>();
+    newThread->start([this] {
+        this->m_scrollText();
+    });
+
+    SetThreadPointer(std::move(newThread));
 }
 
 void Display::m_editHour() {
@@ -186,7 +193,8 @@ void Display::m_setLocation() {
 }
 
 // Oppdatert m_scrollText med sømløs looping, padding og 200ms speed
-void Display::m_scrollText(const std::string& text) {
+void Display::m_scrollText() {
+    std::string text = m_rssstream.rss;
     constexpr size_t windowSize = 16;
     const size_t length = text.length();
 

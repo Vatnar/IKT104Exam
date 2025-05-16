@@ -15,7 +15,7 @@ constexpr bool LOG_ENABLED = true;
 
 Program::Program()
     : m_API(m_datetime, m_weather, m_location, m_rssstream),
-      m_sensor(m_tempHumid), m_display(m_tempHumid, m_location, m_datetime, m_weather){
+      m_sensor(m_tempHumid), m_display(m_tempHumid, m_location, m_datetime, m_weather, m_rssstream){
 
   LINE();
   LINE();
@@ -74,13 +74,11 @@ Program::Program()
     }
 
     // Initialize the rss struct right away
-    Thread rss;
-    rss.start([this] {
-      m_API.GetRSS();
-    });
 
+    m_API.GetRSS();
     
-
+    LOG("WE HERE");
+    m_API.GetDailyForecastByCoordinates();
     // Start inputhandler
     LOG("Starting input handler thread");
     osThreadId_t programThreadId = ThisThread::get_id();
@@ -221,17 +219,15 @@ void Program::temphumid(){
 void Program::weather(){
     LOG("STATE: WEATHER\n");
 
-    auto thread = std::make_unique<Thread>();
-    LOG("MADE THREAD");
+    // auto thread = std::make_unique<Thread>();
+    // LOG("MADE THREAD");
 
-    thread->start([this] {
-        LOG("TRYING TO DO THINGS");
-        m_API.GetDailyForecastByCoordinates();
-        LOG("DDID THINGS");
-        });
+    // thread->start([this] {
+    //     LOG("TRYING TO DO THINGS");
+    //     m_API.GetDailyForecastByCoordinates();
+    //     LOG("DDID THINGS");
+    //     });
 
-    m_display.SetThreadPointer(std::move(thread)); // move ownership
-    LOG("SENT");
 
 
     ButtonState buttonState = waitForSingleButtonPress();
