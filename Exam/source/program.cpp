@@ -6,6 +6,7 @@
 #include "structs.h"
 #include "sensor.h"
 #include "Display.h"
+#include "alarm2.h"
 
 constexpr bool LOG_ENABLED = true;
 
@@ -13,7 +14,8 @@ constexpr bool LOG_ENABLED = true;
 #define LINE() LINE_IF(LOG_ENABLED)
 
 
-Program::Program() : m_API(m_datetime, m_weather, m_coordinate), m_sensor(m_tempHumid), m_display(m_tempHumid){
+Program::Program() : m_API(m_datetime, m_weather, m_coordinate), m_sensor(m_tempHumid), m_display(m_tempHumid)
+ {
 
   LINE();
   LINE();
@@ -89,7 +91,6 @@ Program::Program() : m_API(m_datetime, m_weather, m_coordinate), m_sensor(m_temp
     m_input.Init(programThreadId);
     m_input.InputLoop();
     });
-
 }
 
 int Program::ProgramLoop(){
@@ -146,6 +147,8 @@ void Program::startup(ButtonState &buttonState){
 // TODO refactor it to be better on switching instead of setting explicit
 void Program::showalarm(ButtonState &buttonState){
     LOG("STATE: SHOW ALARM\n");
+
+    
     
     // TODO send to display
     //m_displayThread.flags_set(uint32_t(State::SHOWALARM));

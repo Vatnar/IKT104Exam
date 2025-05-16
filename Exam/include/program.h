@@ -6,6 +6,7 @@
 #include "API.h"
 #include "sensor.h"
 #include "structs.h"
+#include "alarm2.h"
 
 
 class Program {

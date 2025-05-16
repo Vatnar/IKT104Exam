@@ -28,3 +28,13 @@ struct Weather {
     std::string description;
     float temp;
 } __attribute__((aligned(16)));
+
+
+struct AlarmData {
+    Mutex mutex;  // for trygg lesing/skriving fra flere tråder
+    int hour      = 7;
+    int minute    = 30;
+    bool enabled  = false;
+    bool active   = false;
+    bool snoozed  = false;
+} __attribute__((aligned(16)));
