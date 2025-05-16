@@ -21,7 +21,11 @@ class Program {
     void editminute();
     void temphumid( );
     void weather( );
-    void setloc( );
+    void setloc();
+    void locleft();
+    void locright();
+    void locup();
+    void locdown();
     void news( );
 
 
@@ -31,15 +35,11 @@ class Program {
     Display m_display;
     Thread m_displayThread;
 
-
     TempHumid m_tempHumid;
     Sensor m_sensor;
-
-
     
     Datetime m_datetime;
     Weather m_weather;
-    Location m_location;
     RSSStream m_rssstream;
     
     API m_API;
@@ -48,4 +48,10 @@ class Program {
     Input m_input;
     Thread m_inputThread;
 
+
+    // Coordinate stuff
+    Location m_location;
+    TempLocationChange m_tlc;
+    
+    
 };

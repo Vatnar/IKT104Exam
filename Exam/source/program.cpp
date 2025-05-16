@@ -1,6 +1,7 @@
 #include "program.h"
 #include <mbed.h>
 #include <stdio.h>
+#include <string>
 #include "Logger.h"
 #include "API.h"
 #include "structs.h"
@@ -15,7 +16,7 @@ constexpr bool LOG_ENABLED = true;
 
 Program::Program()
     : m_API(m_datetime, m_weather, m_location, m_rssstream),
-      m_sensor(m_tempHumid), m_display(m_tempHumid, m_location, m_datetime, m_weather, m_rssstream){
+      m_sensor(m_tempHumid), m_display(m_tempHumid, m_location, m_datetime, m_weather, m_rssstream, m_tlc){
 
   LINE();
   LINE();
@@ -44,8 +45,9 @@ Program::Program()
     m_weather.temp = 0.0;
     m_weather.mutex.unlock();
 
-    // Hente unix timestamp tar litt tid så derfor si velkommen eller et eller annet på displayet i mens
-    
+    m_tlc.locationChanging = false;
+    m_tlc.latitudeChanging = true;
+    m_tlc.pos = 0;
 
 
 
@@ -106,13 +108,11 @@ ButtonState Program::waitForSingleButtonPress() {
 int Program::ProgramLoop(){
     ButtonState buttonState;
     m_state = State::SHOWALARM;
-
     int32_t flags = 0;
+
     while (true) {
-
-      LOG("[Info] Sent state to display");
-
         m_displayThread.flags_set((uint32_t)m_state);
+        
         switch (m_state){
             case State::STARTUP:        startup();      break;
             case State::SHOWALARM:      showalarm();    break;
@@ -124,17 +124,12 @@ int Program::ProgramLoop(){
             case State::SETLOC:         setloc();       break;
             case State::NEWS:           news();         break;
             default: LOG("[Error] Unknown state %d\n", static_cast<int>(m_state)); break;
-        }
-            
-
-        
+        }        
     }
     return 0;
 }
-void Program::startup(){
-    m_state = State::SHOWALARM;
-}
-// TODO refactor it to be better on switching instead of setting explicit
+void Program::startup() { m_state = State::SHOWALARM; }
+
 void Program::showalarm(){
     LOG("STATE: SHOW ALARM\n");
     
@@ -219,47 +214,96 @@ void Program::temphumid(){
 void Program::weather(){
     LOG("STATE: WEATHER\n");
 
-    // auto thread = std::make_unique<Thread>();
-    // LOG("MADE THREAD");
-
-    // thread->start([this] {
-    //     LOG("TRYING TO DO THINGS");
-    //     m_API.GetDailyForecastByCoordinates();
-    //     LOG("DDID THINGS");
-    //     });
-
-
 
     ButtonState buttonState = waitForSingleButtonPress();
-
+    m_location.mutex.lock();
     switch(buttonState){
         case ButtonState::LEFT:     m_state = State::TEMPHUMID;     break;
         case ButtonState::RIGHT:    m_state = State::NEWS;          break;
         case ButtonState::UP:       m_state = State::SETLOC;        break;
         case ButtonState::DOWN:     LOG("No action\n");             break;
     }
-
+    m_location.mutex.unlock();
 }
 
 // TODO implement location thing.
 void Program::setloc(){
-    LOG("STATE: SETLOC\n");
-
+  LOG("STATE: SETLOC\n");
     
-    // TODO send to display
-    // m_displayThread.flags_set(uint32_t(State::SETLOC));
+    if (m_tlc.locationChanging == false) {
+        m_tlc.locationChanging = true;
+        LOG("STARTING TO CHANGE LOCATION");
+        m_location.mutex.lock();
+        m_tlc.latitude = std::to_string(m_location.latitude);
+        m_tlc.longitude = std::to_string(m_location.longitude);
+    }
 
 
     ButtonState buttonState = waitForSingleButtonPress();
     
     switch(buttonState){
-        case ButtonState::LEFT:     LOG("No action\n");          break;
-        case ButtonState::RIGHT:    LOG("No action\n");          break;
-        case ButtonState::UP:       LOG("No action\n");          break;
-        case ButtonState::DOWN:     LOG("No action\n");          break;
+        case ButtonState::LEFT:     locleft();      break;
+        case ButtonState::RIGHT:    locright();     break;
+        case ButtonState::UP:       locup();        break;
+        case ButtonState::DOWN:     locdown();      break;
+    }
+    LOG("Latitude %s, Longitude %s", m_tlc.latitude.c_str(), m_tlc.longitude.c_str());
+}
+
+void Program::locleft() {
+    if (m_tlc.pos == 0) {
+        m_tlc.latitudeChanging = !m_tlc.latitudeChanging;
     }
 
+    m_tlc.pos--; // move back one character
+
 }
+void Program::locright() {
+    LOG("%s", m_tlc.latitudeChanging ? m_tlc.latitude.c_str() : m_tlc.longitude.c_str());
+
+    // Switch if at end
+    if ((m_tlc.latitudeChanging && m_tlc.pos == m_tlc.latitude.size()) || (!m_tlc.latitudeChanging && m_tlc.pos == m_tlc.longitude.size())) {
+      m_tlc.latitudeChanging = !m_tlc.latitudeChanging;
+      m_tlc.pos = 0;
+      return;
+    }
+
+  m_tlc.pos++; // move forward one character
+
+}
+void Program::locup() {
+    std::string& currentStr = m_tlc.latitudeChanging ? m_tlc.latitude : m_tlc.longitude;
+
+    char& ch = currentStr[m_tlc.pos];
+
+    if (ch >= '0' && ch <= '8') {
+        ch = ch + 1;  // increment digit
+    } else if (ch == '9') {
+        ch = ',';     // switch from 9 to comma
+    } else if (ch == ',') {
+        ch = '0';     // cycle back to 0
+    } else {
+        ch = '0';
+    }
+}
+
+
+void Program::locdown() {
+    LOG("SAVING");
+    LOG("UPDATING INFO");
+    m_API.GetDateTimeByCoordinates();
+    m_API.GetDailyForecastByCoordinates();
+
+    m_tlc.locationChanging = false;
+
+    m_location.mutex.lock();
+    m_location.latitude = std::stod(m_tlc.latitude);
+    m_location.longitude = std::stod(m_tlc.longitude);
+    m_location.mutex.unlock();
+
+    m_state = State::WEATHER;
+}
+
 void Program::news(){
     LOG("STATE: NEWS\n");
 

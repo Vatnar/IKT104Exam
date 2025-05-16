@@ -12,8 +12,8 @@ constexpr bool LOG_ENABLED = true;
 #define LOG(fmt, ...) LOG_IF(LOG_ENABLED, fmt, ##__VA_ARGS__)
 
 Display::Display(TempHumid & tempHumid, Location & coordinate,
-        Datetime & datetime, Weather &weather, RSSStream &rssstream): lcdI2C(D14, D15), lcd( & lcdI2C),
-         m_tempHumid(tempHumid), m_location(coordinate), m_datetime(datetime), m_weather(weather), m_rssstream(rssstream) {
+        Datetime & datetime, Weather &weather, RSSStream &rssstream, TempLocationChange &tlc): lcdI2C(D14, D15), lcd( & lcdI2C),
+         m_tempHumid(tempHumid), m_location(coordinate), m_datetime(datetime), m_weather(weather), m_rssstream(rssstream), m_tlc(tlc) {
         lcd.init();
         thread_sleep_for(80); // Trenger sleep for å initialisere LCD-displayet
         lcd.clear();

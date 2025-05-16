@@ -6,7 +6,7 @@ class Display
 {
 public:
     void EventLoop();
-    Display(TempHumid & tempHumid, Location &coordinate, Datetime &datetime, Weather &weather, RSSStream &rssstream);   // Constructor tar imot referanse
+    Display(TempHumid & tempHumid, Location &coordinate, Datetime &datetime, Weather &weather, RSSStream &rssstream, TempLocationChange &tlc);   // Constructor tar imot referanse
     void SetThreadPointer(std::unique_ptr<Thread> thread); // Needed since display is instantiated at the same time as thread.
 private:
     I2C lcdI2C; 
@@ -37,4 +37,5 @@ private:
     Datetime &m_datetime;
     Weather &m_weather;
     RSSStream &m_rssstream;
+    TempLocationChange &m_tlc;
 };

@@ -33,3 +33,11 @@ struct Weather {
     std::string description;
     float temp;
 } __attribute__((aligned(16)));
+
+struct TempLocationChange {
+    bool locationChanging = false;
+    bool latitudeChanging = true;
+    int pos = 0;
+    std::string latitude;
+    std::string longitude;
+}__attribute__((aligned(16)));
