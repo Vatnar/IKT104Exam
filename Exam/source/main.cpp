@@ -3,5 +3,5 @@
 
 int main() {
     Program program;
-    program.Start();
+    return program.ProgramLoop();
 }
