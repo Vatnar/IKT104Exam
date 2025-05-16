@@ -1,144 +1,65 @@
 #include "alarm.h"
 #include <ctime>
+#include "Logger.h"
+
+constexpr bool LOG_ENABLED = true;
+
+#define LOG(fmt, ...) LOG_IF(LOG_ENABLED, fmt, ##__VA_ARGS__)
+#define LINE() LINE_IF(LOG_ENABLED)
+
 
 using namespace std::chrono_literals;
 
-AlarmManager::AlarmManager(AlarmData& alarmData, Timeout &alarm)
+Alarm::Alarm(AlarmData& alarmData, Timeout &alarm,Timeout &autoMute, Datetime &datetime)
     : m_alarmData(alarmData),
     m_alarm(alarm),
+    m_autoMute(autoMute),
+    m_datetime(datetime),
       m_buzzer(D13)
 {
     m_buzzer.write(0);
 }
 
-void AlarmManager::start() {
-    scheduleNextAlarm();
-}
-
-// Setter alarmtid
-void AlarmManager::setTime(int h, int m) {
-     
-    m_alarmData.hour   = h;
-    m_alarmData.minute = m;
-         // <<< Legg til
-}
 
 
-// Slå alarm på
-void AlarmManager::enable() {
-     
-    m_alarmData.enabled = true;
-         // <<< Legg til
-    scheduleNextAlarm();
-}
-
-
-// Slå alarm av
-void AlarmManager::disable() {
-     
-    m_alarmData.enabled = false;
-         // <<< Legg til
-
-    m_triggerTimeout.detach();
-    m_muteTimeout.detach();
-    m_snoozeTimeout.detach();
-}
-
-
-// Snooze i 5 minutter
-void AlarmManager::snooze() {
-     
-    if (!m_alarmData.active) {
-           // <<< Husk unlock før early return
+void Alarm::scheduleNextAlarm() {
+    if (!m_alarmData.enabled) {
+        LOG("Alarm disabled\n");
         return;
     }
-    m_alarmData.active  = false;
-    m_alarmData.snoozed = true;
-         // <<< Legg til
 
-    m_snoozeTimeout.attach(callback(this, &AlarmManager::triggerAlarm), 5min);
+    using namespace std::chrono;
+
+    time_t current_time = time(nullptr);
+    struct tm *now = localtime(&current_time);
+
+    struct tm alarm_time = *now;
+    alarm_time.tm_hour = m_alarmData.hour-m_datetime.offset-1;
+    alarm_time.tm_min = m_alarmData.minute;
+    alarm_time.tm_sec = 0;
+
+    time_t alarm_epoch = mktime(&alarm_time);
+    double diff = difftime(alarm_epoch, current_time);
+    if (diff <= 0) diff += 24 * 3600;
+
+    // Convert diff seconds to chrono duration
+    auto delay = duration<double>(diff);
+
+    LOG("Scheduling alarm in %.2f seconds\n", diff);
+
+    // If m_alarmTimeout.attach expects a duration in seconds or milliseconds,
+    // convert accordingly. Example assumes attach takes seconds as float:
+    m_alarm.attach(callback(this, &Alarm::triggerAlarmCB), delay.count());
 }
 
-
-// Mute alarm (stopper aktiv eller snoozed)
-void AlarmManager::mute() {
-
-    if (m_alarmData.enabled) {
-    scheduleNextAlarm();
-    }
-
-
-     
-    m_alarmData.active  = false;
-    m_alarmData.snoozed = false;
-      
-
-    m_buzzer.write(0);
-
-    scheduleNextAlarm();
+void Alarm::snooze(){
+    auto delay = 5s;
+    m_alarm.attach(callback( this, &Alarm::triggerAlarmCB), delay.count());
 }
 
-
-bool AlarmManager::isActive() const {
-     
-    bool v = m_alarmData.active;
-        // <<< Legg til
-    return v;
-}
-
-bool AlarmManager::isSnoozed() const {
-     
-    bool v = m_alarmData.snoozed;
-        // <<< Legg til
-    return v;
-}
-
-bool AlarmManager::isEnabled() const {
-     
-    bool v = m_alarmData.enabled;
-        // <<< Legg til
-    return v;
-}
-
-std::pair<int,int> AlarmManager::getTime() const {
-     
-    auto p = std::make_pair(m_alarmData.hour, m_alarmData.minute);
-        // <<< Legg til
-    return p;
-}
-
-// Intern: beregn neste trigger basert på nåtid + alarmtid
-void AlarmManager::scheduleNextAlarm() {
-        
-     
-    if (!m_alarmData.enabled) {
-     
-    return;
-    }
-    
-    auto now = clock::now();
-    time_t t = clock::to_time_t(now);
-    std::tm tm   = *std::localtime(&t);
-
-    int &h = m_alarmData.hour;
-    int &m = m_alarmData.minute;
-     
-    tm.tm_hour = h;
-    tm.tm_min  = m;
-    tm.tm_sec  = 0;
-    
-    auto timeringing = clock::from_time_t(std::mktime(&tm));
-    if (timeringing <= now) {
-        timeringing += 24h;
-    }
-    auto delay = timeringing - now;
-
-
-    m_triggerTimeout.attach(callback(this, &AlarmManager::triggerAlarm), delay);
-}
 
 // Internt: kalles når alarmtid nås
-void AlarmManager::triggerAlarm() {
+void Alarm::triggerAlarmCB() {
 
     m_alarmData.active  = true;
     m_alarmData.snoozed = false;    
@@ -146,13 +67,14 @@ void AlarmManager::triggerAlarm() {
     // Start buzzer
     m_buzzer.period(0.001);
     m_buzzer.write(0.9);    
-
-    // Sett auto-mute etter 10 minutter
-    m_muteTimeout.attach(callback(this, &AlarmManager::autoMute), 10min);
 }
 
+void Alarm::startAutoMute(){
+    auto delay = 10min;
+    m_autoMute.attach(callback(this, &Alarm::autoMuteCB), delay.count());
+}
 // Intern: auto-mute etter utløpstid
-void AlarmManager::autoMute() {
+void Alarm::autoMuteCB() {
     
     m_alarmData.active = false;
     

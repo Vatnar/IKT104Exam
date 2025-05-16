@@ -37,11 +37,11 @@ struct Weather {
 
 struct AlarmData {
     Mutex mutex;  
-    int hour      = 7;
-    int minute    = 30;
-    bool enabled  = false;
-    bool active   = false;
-    bool snoozed  = false;
+    int hour;
+    int minute;
+    bool enabled;
+    bool active;
+    bool snoozed;
 } __attribute__((aligned(16)));
 
 

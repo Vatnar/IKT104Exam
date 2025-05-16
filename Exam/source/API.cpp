@@ -204,6 +204,7 @@ void API::StartUp() {
     if (j.contains("time_zone") &&
         j["time_zone"].contains("date_time_unix")) {
         m_datetime.timestamp = (int)j["time_zone"]["date_time_unix"];
+        set_time(m_datetime.timestamp);
         m_datetime.code = NSAPI_ERROR_OK;
     } else {
         LOG("[ERROR] Missing timezone/unix in JSON");

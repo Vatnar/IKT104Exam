@@ -19,7 +19,7 @@ public:
         // Get current thread ID
         auto thread_id = ThisThread::get_id();
 
-        printf("[%-20s:%-4d] %-20s [TID: 0x%08lx]: ", file, line, func, reinterpret_cast<uint32_t>(thread_id));
+        printf("[%-20s:%-4d] %-20s [TID: 0x%08x]: ", file, line, func, reinterpret_cast<uint32_t>(thread_id));
 
         va_list args;
         va_start(args, format);

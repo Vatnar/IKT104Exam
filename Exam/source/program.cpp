@@ -16,7 +16,10 @@ constexpr bool LOG_ENABLED = true;
 
 Program::Program()
     : m_API(m_datetime, m_weather, m_location, m_rssstream),
-      m_sensor(m_tempHumid), m_display(m_tempHumid, m_location, m_datetime, m_weather, m_rssstream, m_tlc){
+      m_sensor(m_tempHumid), 
+      m_display(m_tempHumid, m_location, m_datetime, m_weather, m_rssstream, m_tlc),
+      m_alarm(m_alarmData, m_alarmTimeout, m_autoMute, m_datetime)
+      {
 
   LINE();
   LINE();
@@ -45,10 +48,16 @@ Program::Program()
     m_weather.temp = 0.0;
     m_weather.mutex.unlock();
 
+    m_alarmData.mutex.lock();
+    m_alarmData.active = false;
+    m_alarmData.enabled = true;
+    m_alarmData.hour = 16;
+    m_alarmData.minute = 16;
+    m_alarmData.mutex.unlock();
+
     m_tlc.locationChanging = false;
     m_tlc.latitudeChanging = true;
     m_tlc.pos = 0;
-
 
 
     LOG("[INFO] Starting API startup thread");
@@ -105,12 +114,79 @@ ButtonState Program::waitForSingleButtonPress() {
     return static_cast<ButtonState>(flags);
 }
 
+
+void Program::CheckAlarmStatus(){
+    m_alarmData.mutex.lock();
+    if (!m_alarmData.active){
+        m_alarmData.mutex.unlock();
+        return;
+    }
+    m_alarmData.mutex.unlock();
+
+    LOG("BEEERT");
+
+    m_alarm.startAutoMute();
+    ButtonState buttonState;
+
+    while (true) {
+        int32_t flags = ThisThread::flags_get();
+        LOG("flags = %d", flags);
+        if (flags != 0){
+            LOG("GOT INPUT WHILE RINGING");
+
+            buttonState = static_cast<ButtonState>(flags);  
+            m_alarmData.mutex.lock();
+            switch (buttonState){
+                case ButtonState::LEFT:     
+                    m_alarmData.snoozed = true;     
+                    break;
+                case ButtonState::RIGHT:    
+                    m_alarmData.active = false;     
+                    m_alarm.scheduleNextAlarm();     
+                    break;
+                case ButtonState::UP:       
+                    m_alarmData.snoozed = true;     
+                    break;
+                case ButtonState::DOWN:     
+                    m_alarmData.active = false;     
+                    m_alarm.scheduleNextAlarm();     
+                    break;
+                default:
+                    LOG("Unknown button state");
+            }
+            m_alarmData.mutex.unlock();
+
+        } else {
+            LOG("NO INPUT");
+        }
+
+        m_alarmData.mutex.lock();
+        if (m_alarmData.snoozed){            
+            m_alarm.snooze();
+            m_alarm.m_buzzer.write(0);
+            m_alarmData.mutex.unlock();
+            return;
+        }
+        if (!m_alarmData.active){
+            LOG("TURNED OFF");
+            m_alarm.m_buzzer.write(0);
+            m_alarmData.mutex.unlock();
+            return;
+        }
+        m_alarmData.mutex.unlock();
+    }
+}
+
 int Program::ProgramLoop(){
+    m_alarm.scheduleNextAlarm();
+
     ButtonState buttonState;
     m_state = State::SHOWALARM;
     int32_t flags = 0;
 
     while (true) {
+        
+        CheckAlarmStatus();
         m_displayThread.flags_set((uint32_t)m_state);
         
         switch (m_state){
@@ -148,8 +224,8 @@ void Program::editenabled(){
     ButtonState buttonState = waitForSingleButtonPress();
 
     switch(buttonState){
-        case ButtonState::LEFT:     LOG("Toggle enabled\n");     break;
-        case ButtonState::RIGHT:    LOG("Toggle enabled\n");     break;
+        case ButtonState::LEFT:     m_alarmData.mutex.lock(); m_alarmData.enabled = !m_alarmData.enabled; m_alarmData.mutex.unlock();     break;
+        case ButtonState::RIGHT:    m_alarmData.mutex.lock(); m_alarmData.enabled = !m_alarmData.enabled; m_alarmData.mutex.unlock();      break;
         case ButtonState::UP:       m_state = State::SHOWALARM;     break;
         case ButtonState::DOWN:     m_state = State::EDITHOUR;      break;
     }   

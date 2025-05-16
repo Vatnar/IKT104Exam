@@ -6,15 +6,18 @@
 #include "API.h"
 #include "sensor.h"
 #include "structs.h"
+#include "alarm.h"
 
 
 class Program {
     public:
     Program();
     int ProgramLoop();
-    ButtonState waitForSingleButtonPress();
+    
     private:
+    ButtonState waitForSingleButtonPress();
     void startup();
+    void CheckAlarmStatus();
     void showalarm();
     void editenabled();
     void edithour();
@@ -53,5 +56,9 @@ class Program {
     Location m_location;
     TempLocationChange m_tlc;
     
+    Alarm m_alarm;
+    AlarmData m_alarmData;
+    Timeout m_alarmTimeout;
+    Timeout m_autoMute;
     
 };
