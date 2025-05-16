@@ -12,11 +12,12 @@ enum class State: uint32_t {
     NEWS        = 1UL << 8,
 };
 
-enum class ButtonState: uint32_t{
-    LEFT        = 1UL << 0,
-    UP          = 1UL << 1,
-    DOWN        = 1UL << 2,
-    RIGHT       = 1UL << 3
+enum class ButtonState : uint32_t {
+  LEFT = 1UL << 0,
+  UP = 1UL << 1,
+  DOWN = 1UL << 2,
+  RIGHT = 1UL << 3,
+  NONE = 1UL << 4
 };
 constexpr uint32_t ANYSTATE =
     static_cast<uint32_t>(State::STARTUP) |

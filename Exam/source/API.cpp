@@ -9,7 +9,7 @@ constexpr bool LOG_ENABLED = true;
 using json = nlohmann::json;
 
 void API::connectWiFi() {
-  
+
   // Connect to default network interface
     LINE();
     m_net = NetworkInterface::get_default_instance();
@@ -54,45 +54,61 @@ void API::connectWiFi() {
 }
 
 void API::connectToHost(TCPSocket &socket, const char *hostname) {
-
+    const int MAX_DNS_RETRIES = 3;
+    const int MAX_CONNECT_RETRIES = 3;
+    const int RETRY_DELAY_MS = 1000; // 1 second
 
     nsapi_size_or_error_t status = socket.open(m_net);
-     
     socket.set_timeout(500);
 
-
-        if (status != NSAPI_ERROR_OK) {
+    if (status != NSAPI_ERROR_OK) {
         LOG("[WARN] Failed to open TCPSocket: %d", status);
-        }
-        
-    
+        return;
+    }
+
     LINE();
 
-    status = m_net->gethostbyname(hostname, m_address);
-    if (status != 0) {
-        LOG("[WARN] gethostbyname(%s) returned: %d", hostname, status);
+    // Retry DNS resolution
+    int dns_attempts = 0;
+    do {
+        status = m_net->gethostbyname(hostname, m_address);
+        if (status == NSAPI_ERROR_OK) break;
+
+        LOG("[WARN] gethostbyname(%s) attempt %d failed: %d", hostname, dns_attempts + 1, status);
+        ThisThread::sleep_for(RETRY_DELAY_MS);
+    } while (++dns_attempts < MAX_DNS_RETRIES);
+
+    if (status != NSAPI_ERROR_OK) {
+        LOG("[ERROR] DNS resolution failed after %d attempts for %s: %d", dns_attempts, hostname, status);
+        m_datetime.code = status;
+        return;
     }
 
     LOG("[INFO] IP address of server %s is %s", hostname, m_address->get_ip_address());
-
-     if (status != NSAPI_ERROR_OK) {
-     LOG("[WARN] DNS resolution failed for %s: %d", hostname, status);
-     }
     m_address->set_port(80);
 
-
     LINE();
-    status = socket.connect(*m_address);
+
+    // Retry connection
+    int connect_attempts = 0;
+    do {
+        status = socket.connect(*m_address);
+        if (status == NSAPI_ERROR_OK) break;
+
+        LOG("[WARN] Connection attempt %d to %s failed: %d", connect_attempts + 1, hostname, status);
+        ThisThread::sleep_for(RETRY_DELAY_MS);
+    } while (++connect_attempts < MAX_CONNECT_RETRIES);
 
     if (status != NSAPI_ERROR_OK) {
-    LOG("[WARN] Failed to connect to %s on port 80: %d", hostname, status);
-    socket.close();
-    m_datetime.code = status;
-    return;
+        LOG("[ERROR] Failed to connect to %s on port 80 after %d attempts: %d", hostname, connect_attempts, status);
+        socket.close();
+        m_datetime.code = status;
+        return;
     }
 
     LOG("Successfully connected to %s", hostname);
 }
+
 
 std::string API::getTimezoneData(Socket &socket ) {
   // TODO Perhaps put in env for code style
@@ -203,7 +219,7 @@ void API::StartUp() {
     m_datetime.mutex.unlock();
 
 
-    m_coordinate.mutex.lock();
+    m_location.mutex.lock();
 
     if (j.contains("location") && j["location"].contains("longitude")) {
         auto lon_str = j["location"]["longitude"].get<std::string>();
@@ -212,7 +228,7 @@ void API::StartUp() {
         double lon = std::strtod(cstr, &end);
 
         if (end != lon_str.c_str()) {
-          m_coordinate.longitude = lon;
+          m_location.longitude = lon;
         } else {
             LOG("[ERROR] Failed to convert longitude string to double");
         }
@@ -225,16 +241,16 @@ void API::StartUp() {
         double lon = std::strtod(cstr, &end);
 
         if (end != lon_str.c_str()) {
-          m_coordinate.latitude = lon;
+          m_location.latitude = lon;
         } else {
             LOG("[ERROR] Failed to convert latitude string to double");
         }
-      
     }
+    m_location.city = j["location"]["city"].get<std::string>();
 
-    LOG("long: %f, lat %f", m_coordinate.longitude, m_coordinate.latitude);
+    LOG("long: %f, lat %f, city: %s", m_location.longitude, m_location.latitude, m_location.city.c_str());
 
-    m_coordinate.mutex.unlock();
+    m_location.mutex.unlock();
 
     socket->close();
 }
@@ -250,13 +266,13 @@ void API::GetDateTimeByCoordinates() {
     char request[512];
 
 
-    m_coordinate.mutex.lock();
+    m_location.mutex.lock();
     snprintf(request, sizeof(request),
              "GET /v2/timezone?apiKey=%s&lat=%f&long=%f HTTP/1.1\r\n"
              "Host: api.ipgeolocation.io\r\n"
              "Connection: close\r\n\r\n",
-             api_key, m_coordinate.latitude, m_coordinate.longitude);
-    m_coordinate.mutex.unlock();
+             api_key, m_location.latitude, m_location.longitude);
+    m_location.mutex.unlock();
     
     int bytes_sent = socket->send(request, strlen(request));
     if (bytes_sent < 0) {
@@ -333,25 +349,29 @@ void API::GetDateTimeByCoordinates() {
 
 void API::GetDailyForecastByCoordinates() {
 
+    LOG("DID THIS");
     std::unique_ptr<TCPSocket> socket = std::make_unique<TCPSocket>();
     connectToHost(*socket, "api.openweathermap.org");
+    LOG("DID THIS");
 
     const char *api_key = "9a370cb3212a5d999fb46e975d41bd72";
 
     char request[512];
-    m_coordinate.mutex.lock();
+    m_location.mutex.lock();
     snprintf(request, sizeof(request),
              "GET /data/2.5/weather?lat=%f&lon=%f&appid=%s HTTP/1.1\r\n"
              "Host: api.openweathermap.org\r\n"
              "Connection: close\r\n\r\n",
-             m_coordinate.latitude, m_coordinate.longitude, api_key);
-    m_coordinate.mutex.unlock();
+             m_location.latitude, m_location.longitude, api_key);
+    m_location.mutex.unlock();
+    LOG("DID THIS");
 
     int bytes_sent = socket->send(request, strlen(request));
     if (bytes_sent < 0) {
         LOG("[ERROR] Failed to send request: %d", bytes_sent);
         return;
     }
+    LOG("DID THIS");
 
     char buffer[8192];
     int total_bytes_received = 0;
@@ -362,12 +382,14 @@ void API::GetDailyForecastByCoordinates() {
                                           sizeof(buffer) - 1 - total_bytes_received)) > 0) {
         total_bytes_received += bytes_received;
     }
+    LOG("DID THIS");
 
     if (bytes_received < 0 || total_bytes_received == 0) {
         LOG("[ERROR] Failed to receive data.");
         socket->close();
         return;
     }
+    LOG("DID THIS");
 
     buffer[total_bytes_received] = '\0';
 
@@ -379,6 +401,7 @@ void API::GetDailyForecastByCoordinates() {
     float temp = float(j["main"]["temp"]) - 273.15;
     LINE();
     LOG("[info] Weather: %s, temp: %f", description.c_str(), temp);
+    LOG("DID THIS");
 
 
     socket->close();

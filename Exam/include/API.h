@@ -17,9 +17,9 @@ public:
 // Fetches Unix timestamp and location + timezone and returns them in apiargs
   void StartUp();
 
-  API(Datetime &datetime, Weather &weather, Coordinate &coordinate, RSSStream &rssstream)
+  API(Datetime &datetime, Weather &weather, Location &coordinate, RSSStream &rssstream)
       : m_datetime(datetime), m_weather(weather),
-        m_coordinate(coordinate), m_rssstream(rssstream){};
+        m_location(coordinate), m_rssstream(rssstream){};
   ~API();
   void GetDateTimeByCoordinates();
   void GetDailyForecastByCoordinates();
@@ -31,7 +31,7 @@ private:
 
   Datetime &m_datetime;
   Weather &m_weather;
-  Coordinate &m_coordinate;
+  Location &m_location;
   RSSStream &m_rssstream;
 
   void connectWiFi();

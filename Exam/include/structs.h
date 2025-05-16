@@ -21,10 +21,11 @@ struct Datetime {
   nsapi_error_t code;
 } __attribute__((aligned(16)));
 
-struct Coordinate {
+struct Location {
     Mutex mutex;
     double latitude;
     double longitude;
+    std::string city;
 } __attribute__((aligned(16)));
 
 struct Weather {

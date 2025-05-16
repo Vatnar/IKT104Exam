@@ -6,8 +6,8 @@ class Display
 {
 public:
     void EventLoop();
-    Display(TempHumid & tempHumid);   // Constructor tar imot referanse
-
+    Display(TempHumid & tempHumid, Location &coordinate, Datetime &datetime, Weather &weather);   // Constructor tar imot referanse
+    void SetThreadPointer(std::unique_ptr<Thread> thread); // Needed since display is instantiated at the same time as thread.
 private:
     I2C lcdI2C; 
     DFRobot_RGBLCD1602 lcd;
@@ -30,5 +30,10 @@ private:
     void m_scrollText(const std::string& tekst);
 
 
-    TempHumid & m_tempHumid;     // Referanse til shared struct
+    std::unique_ptr<Thread> m_threadPtr; // Needed to move ownership
+
+    TempHumid &m_tempHumid;
+    Location &m_location;
+    Datetime &m_datetime;
+    Weather &m_weather;
 };
