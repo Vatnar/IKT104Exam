@@ -114,7 +114,7 @@ void API::connectToHost(TCPSocket &socket, const char *hostname) {
 
 std::string API::getTimezoneData(Socket &socket ) {
   // TODO Perhaps put in env for code style
-    const char *api_key = "dd8232f6deda47b7a1bf3eeb2512129d";
+    const char *api_key = "";
 
     // Sends a request to the server
     char request[512];
@@ -265,7 +265,7 @@ void API::GetDateTimeByCoordinates() {
 
 
   
-    const char *api_key = "dd8232f6deda47b7a1bf3eeb2512129d";
+    const char *api_key = "";
 
     char request[512];
 
@@ -356,7 +356,7 @@ void API::GetDailyForecastByCoordinates() {
     std::unique_ptr<TCPSocket> socket = std::make_unique<TCPSocket>();
     connectToHost(*socket, "api.openweathermap.org");
 
-    const char *api_key = "9a370cb3212a5d999fb46e975d41bd72";
+    const char *api_key = "";
 
     // Requests forecast
     char request[512];
