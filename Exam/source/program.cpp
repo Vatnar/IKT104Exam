@@ -17,7 +17,7 @@ constexpr bool LOG_ENABLED = true;
 Program::Program()
     : m_API(m_datetime, m_weather, m_location, m_rssstream),
       m_sensor(m_tempHumid), 
-      m_display(m_tempHumid, m_location, m_datetime, m_weather, m_rssstream, m_tlc),
+      m_display(m_tempHumid, m_location, m_datetime, m_weather, m_rssstream, m_tlc, m_editAlarm),
       m_alarm(m_alarmData, m_alarmTimeout, m_autoMute, m_datetime)
       {
 
@@ -58,6 +58,11 @@ Program::Program()
     m_tlc.locationChanging = false;
     m_tlc.latitudeChanging = true;
     m_tlc.pos = 0;
+
+    std::string m_editAlarmTime = "0730";  // Startverdi
+    int m_editAlarmPos = 0;                     // Posisjon mellom 0 og 3
+    bool m_editingAlarmTime = false;
+
 
 
     LOG("[INFO] Starting API startup thread");
@@ -113,7 +118,6 @@ ButtonState Program::waitForSingleButtonPress() {
 
     return static_cast<ButtonState>(flags);
 }
-
 
 void Program::CheckAlarmStatus(){
     m_alarmData.mutex.lock();
@@ -192,9 +196,7 @@ int Program::ProgramLoop(){
         switch (m_state){
             case State::STARTUP:        startup();      break;
             case State::SHOWALARM:      showalarm();    break;
-            case State::EDITHOUR:       edithour();     break;
-            case State::EDITMINUTE:     editminute();   break;
-            case State::EDITENABLED:    editenabled();  break;
+            case State::EDITALARM:      editAlarm();     break;
             case State::TEMPHUMID:      temphumid();    break;
             case State::WEATHER:        weather();      break;
             case State::SETLOC:         setloc();       break;
@@ -204,6 +206,7 @@ int Program::ProgramLoop(){
     }
     return 0;
 }
+
 void Program::startup() { m_state = State::SHOWALARM; }
 
 void Program::showalarm(){
@@ -213,48 +216,92 @@ void Program::showalarm(){
     switch(buttonState){
         case ButtonState::LEFT:     m_state = State::NEWS;          break;
         case ButtonState::RIGHT:    m_state = State::TEMPHUMID;     break;
-        case ButtonState::UP:       m_state = State::EDITENABLED;   break;
+        case ButtonState::UP:       m_state = State::EDITALARM;   break;
         case ButtonState::DOWN:     LOG("No action\n");          break;
     }
-
 }
+
 void Program::editenabled(){
     LOG("STATE: EDITENABLED\n");
 
     ButtonState buttonState = waitForSingleButtonPress();
 
     switch(buttonState){
-        case ButtonState::LEFT:     m_alarmData.mutex.lock(); m_alarmData.enabled = !m_alarmData.enabled; m_alarmData.mutex.unlock();     break;
-        case ButtonState::RIGHT:    m_alarmData.mutex.lock(); m_alarmData.enabled = !m_alarmData.enabled; m_alarmData.mutex.unlock();      break;
+        case ButtonState::LEFT:     m_alarmData.mutex.lock(); m_alarmData.enabled = !m_alarmData.enabled; m_alarmData.mutex.unlock();   break;
+        case ButtonState::RIGHT:    m_alarmData.mutex.lock(); m_alarmData.enabled = !m_alarmData.enabled; m_alarmData.mutex.unlock();   break;
         case ButtonState::UP:       m_state = State::SHOWALARM;     break;
-        case ButtonState::DOWN:     m_state = State::EDITHOUR;      break;
+        case ButtonState::DOWN:     m_state = State::EDITALARM;      break;
     }   
 }
-void Program::edithour(){
-    LOG("STATE: EDITHOUR\n");
 
-    ButtonState buttonState = waitForSingleButtonPress();
-    
-    switch(buttonState){
-        case ButtonState::LEFT:     LOG("Value down\n");         break;
-        case ButtonState::RIGHT:    LOG("Value up\n");           break;
-        case ButtonState::UP:       m_state = State::SHOWALARM;     break;
-        case ButtonState::DOWN:     m_state = State::EDITMINUTE;    break;
+void Program::editAlarm() {
+    LOG("STATE: EDITALARM");
+
+    if (!m_editAlarm.editing) {
+        m_editAlarm.editing = true;
+        m_alarmData.mutex.lock();
+        m_editAlarm.hour   = m_alarmData.hour;
+        m_editAlarm.minute = m_alarmData.minute;
+        m_alarmData.mutex.unlock();
+        m_editAlarm.pos = 0;
+        m_editAlarm.editingHour = true;
     }
 
+    ButtonState buttonState = waitForSingleButtonPress();
+
+    switch(buttonState) {
+        case ButtonState::LEFT:  alarmLeft();  break;
+        case ButtonState::RIGHT: alarmRight(); break;
+        case ButtonState::UP:    alarmUp();    break;
+        case ButtonState::DOWN:  alarmDown();  break;
+    }
+
+    LOG("Alarm: %i:%i", m_editAlarm.hour, m_editAlarm.minute);
 }
-void Program::editminute(){
-    LOG("STATE: EDITMINUTE\n");
 
-
-    ButtonState buttonState = waitForSingleButtonPress();
-    
-    switch(buttonState){
-        case ButtonState::LEFT:     LOG("Value down\n");         break;
-        case ButtonState::RIGHT:    LOG("Value up\n");           break;
-        case ButtonState::UP:       m_state = State::SHOWALARM;     break;
-        case ButtonState::DOWN:     m_state = State::EDITENABLED;   break;
+void Program::alarmLeft() {
+    if (m_editAlarm.pos == 0) {
+        m_editAlarm.editingHour = !m_editAlarm.editingHour;
     }
+    m_editAlarm.pos = (m_editAlarm.pos - 1 + 2) % 2;
+}
+
+void Program::alarmRight() {
+    if ((m_editAlarm.editingHour && m_editAlarm.pos == 1) ||
+        (!m_editAlarm.editingHour && m_editAlarm.pos == 1)) {
+        m_editAlarm.editingHour = !m_editAlarm.editingHour;
+        m_editAlarm.pos = 0;
+        return;
+    }
+    m_editAlarm.pos++;
+}
+
+void Program::alarmUp() {
+    switch (m_editAlarm.pos) {
+        case 0:
+            m_editAlarm.hour += 10;
+            break;
+        case 1:
+            m_editAlarm.hour += 1;
+            break;
+        case 2:
+            m_editAlarm.minute += 10;
+            break;
+        case 3:
+            m_editAlarm.minute += 1;
+            break;
+    }
+
+    if (m_editAlarm.hour > 23) m_editAlarm.hour = 0;
+    if (m_editAlarm.minute > 59) m_editAlarm.minute = 0;
+}
+
+
+void Program::alarmDown() {
+    LOG("Saving edited alarm...");
+
+    m_editAlarm.editing = false;
+    m_state = State::SHOWALARM;
 }
 
 void Program::temphumid(){
@@ -287,6 +334,7 @@ void Program::temphumid(){
         case ButtonState::DOWN:     LOG("No action\n");          break;
     }
 }
+
 void Program::weather(){
     LOG("STATE: WEATHER\n");
 
@@ -334,6 +382,7 @@ void Program::locleft() {
     m_tlc.pos--; // move back one character
 
 }
+
 void Program::locright() {
     LOG("%s", m_tlc.latitudeChanging ? m_tlc.latitude.c_str() : m_tlc.longitude.c_str());
 
@@ -347,6 +396,7 @@ void Program::locright() {
   m_tlc.pos++; // move forward one character
 
 }
+
 void Program::locup() {
     std::string& currentStr = m_tlc.latitudeChanging ? m_tlc.latitude : m_tlc.longitude;
 
@@ -362,7 +412,6 @@ void Program::locup() {
         ch = '0';
     }
 }
-
 
 void Program::locdown() {
     LOG("SAVING");
@@ -394,5 +443,4 @@ void Program::news(){
         case ButtonState::UP:       LOG("No action\n");          break;
         case ButtonState::DOWN:     LOG("No action\n");          break;
     }
-
 }

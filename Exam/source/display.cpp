@@ -5,6 +5,8 @@
 #include <string>
 #include "structs.h"
 #include <chrono>
+#include <ctime>
+
 using namespace std::chrono_literals;
 
 constexpr bool LOG_ENABLED = true;
@@ -12,8 +14,8 @@ constexpr bool LOG_ENABLED = true;
 #define LOG(fmt, ...) LOG_IF(LOG_ENABLED, fmt, ##__VA_ARGS__)
 
 Display::Display(TempHumid & tempHumid, Location & coordinate,
-        Datetime & datetime, Weather &weather, RSSStream &rssstream, TempLocationChange &tlc): lcdI2C(D14, D15), lcd( & lcdI2C),
-         m_tempHumid(tempHumid), m_location(coordinate), m_datetime(datetime), m_weather(weather), m_rssstream(rssstream), m_tlc(tlc) {
+        Datetime & datetime, Weather &weather, RSSStream &rssstream, TempLocationChange &tlc, EditAlarm &editAlarm): lcdI2C(D14, D15), lcd( & lcdI2C),
+         m_tempHumid(tempHumid), m_location(coordinate), m_datetime(datetime), m_weather(weather), m_rssstream(rssstream), m_tlc(tlc), m_editAlarm(editAlarm) {
         lcd.init();
         thread_sleep_for(80); // Trenger sleep for å initialisere LCD-displayet
         lcd.clear();
@@ -25,6 +27,7 @@ Display::Display(TempHumid & tempHumid, Location & coordinate,
       m_threadPtr = std::move(thread);
       LOG("SET VARIABLE");
 }
+
 void Display::EventLoop() {
     State state = State::STARTUP;                // Instansierer State-klassen
     int32_t flags = 0;
@@ -54,14 +57,10 @@ state = static_cast<State>(flags);
 switch (state) {
             case State::STARTUP:        m_displayStartup();     break;
             case State::SHOWALARM:      m_displayAlarm();       break;
-            //TODO tror datetime skal vises konstant på toppen - Peter
-            // case State::DATETIME:       m_displayDateTime();    break;
-            case State::EDITENABLED:    m_editEnabled();        break;
+            case State::EDITALARM:      m_displayAlarm();       break;
             case State::TEMPHUMID:      m_displayTempHum();     break;
             case State::WEATHER:        m_displayWeather();     break;
             case State::NEWS:           m_displayNews();        break;
-            case State::EDITHOUR:       m_editHour();           break;
-            case State::EDITMINUTE:     m_editMinute();         break;
             case State::SETLOC:         m_setLocation();        break;
         }
     }
@@ -105,19 +104,28 @@ void Display::m_displayStartup() {
 
 void Display::m_displayAlarm() {
     LOG("[DEBUG] DISPLAYING ALARM");
+
+    m_updateTime();
+
     lcd.clear();
-    lcd.setCursor(0,0);
-    lcd.printf("Alarm      7:30");
+    lcd.setCursor(0, 0);
+    lcd.printf("%s %02d %s %02d:%02d", m_clock.day, m_clock.date, m_clock.month, m_clock.hour, m_clock.minute);
+
     lcd.setCursor(0, 1);
-    lcd.printf("---------------");
-}
 
-void Display::m_displayDateTime() {
-    
-}
-
-void Display::m_editEnabled() {
-
+    if (m_editAlarm.editing)
+        lcd.printf("Alarm (E)   %02i:%02i", m_alarm.hour, m_alarm.minute);
+    else {
+        if (m_alarm.snoozed) {
+            lcd.printf("Alarm (S)  %02i:%02i", m_alarm.hour, m_alarm.minute);
+        } else if (m_alarm.active) {
+            lcd.printf("Alarm (A)  %02i:%02i", m_alarm.hour, m_alarm.minute);
+        } else if (m_alarm.enabled) {
+            lcd.printf("Alarm      %02i:%02i", m_alarm.hour, m_alarm.minute);
+        } else {
+            lcd.printf("Alarm OFF");
+        }
+    }
 }
 
 void Display::m_displayTempHum() {
@@ -162,7 +170,7 @@ void Display::m_displayWeather() {
 void Display::m_displayNews() {
       lcd.clear();
     lcd.setCursor(0, 0);
-    lcd.printf("BBC");
+    lcd.printf("CNN");
 
     if (m_threadPtr) {
         LOG("[DEBUG] Sending stop flag to scroll thread");
@@ -171,21 +179,12 @@ void Display::m_displayNews() {
         m_threadPtr.reset();
     }
 
-    std::string message = "The past, present and future walked into a bar, it was tense";
     auto newThread = std::make_unique<Thread>();
     newThread->start([this] {
         this->m_scrollText();
     });
 
     SetThreadPointer(std::move(newThread));
-}
-
-void Display::m_editHour() {
-
-}
-
-void Display::m_editMinute() {
-
 }
 
 void Display::m_setLocation() {
@@ -236,4 +235,20 @@ void Display::m_scrollText() {
         // Neste posisjon
         pos = (pos + 1) % totalLength;
     }
+}
+
+void Display::m_updateTime() {
+    time_t now = time(NULL);
+    now += m_datetime.offset * 3600 * 2;  // Juster med offset i sekunder
+    struct tm *localTime = localtime(&now);
+
+    const char* days[]   = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+    const char* months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                            "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+
+    m_clock.day    = days[localTime->tm_wday];
+    m_clock.date   = localTime->tm_mday;
+    m_clock.month  = months[localTime->tm_mon];
+    m_clock.hour   = localTime->tm_hour;
+    m_clock.minute = localTime->tm_min;
 }

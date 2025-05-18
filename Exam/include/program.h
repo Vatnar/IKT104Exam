@@ -10,29 +10,32 @@
 
 
 class Program {
-    public:
+public:
     Program();
     int ProgramLoop();
     
-    private:
+private:
     ButtonState waitForSingleButtonPress();
     void startup();
     void CheckAlarmStatus();
     void showalarm();
     void editenabled();
-    void edithour();
-    void editminute();
-    void temphumid( );
-    void weather( );
+    void temphumid();
+    void weather();
+    void news();
+
+
     void setloc();
     void locleft();
     void locright();
     void locup();
     void locdown();
-    void news( );
 
-
-  private:
+    void editAlarm();
+    void alarmUp();
+    void alarmDown();
+    void alarmLeft();
+    void alarmRight();
     
     State m_state;
     Display m_display;
@@ -60,5 +63,8 @@ class Program {
     AlarmData m_alarmData;
     Timeout m_alarmTimeout;
     Timeout m_autoMute;
-    
+
+    EditAlarm m_editAlarm;
+
+        
 };

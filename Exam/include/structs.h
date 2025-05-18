@@ -52,3 +52,21 @@ struct TempLocationChange {
     std::string latitude;
     std::string longitude;
 }__attribute__((aligned(16)));
+
+struct ClockData {
+    const char* day;
+    int date;
+    const char* month;
+    int hour;
+    int minute;
+};
+
+#pragma once
+
+struct EditAlarm {
+    bool editing = false;
+    int hour;
+    int minute;
+    bool editingHour = true; // true = redigerer time, false = redigerer minutt
+    int pos = 0;             // posisjon for redigering (valgfritt om du vil støtte tegnredigering)
+};

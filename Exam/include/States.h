@@ -3,7 +3,7 @@
 enum class State: uint32_t {
     STARTUP     = 1UL << 0,
     SHOWALARM   = 1UL << 1,
-    EDITHOUR    = 1UL << 2,
+    EDITALARM    = 1UL << 2,
     EDITMINUTE  = 1UL << 3,
     EDITENABLED = 1UL << 4,
     TEMPHUMID   = 1UL << 5,
@@ -22,7 +22,7 @@ enum class ButtonState : uint32_t {
 constexpr uint32_t ANYSTATE =
     static_cast<uint32_t>(State::STARTUP) |
     static_cast<uint32_t>(State::SHOWALARM) |
-    static_cast<uint32_t>(State::EDITHOUR) |
+    static_cast<uint32_t>(State::EDITALARM) |
     static_cast<uint32_t>(State::EDITMINUTE) |
     static_cast<uint32_t>(State::EDITENABLED) |
     static_cast<uint32_t>(State::TEMPHUMID) |
