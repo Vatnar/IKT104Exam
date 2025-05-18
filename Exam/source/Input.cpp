@@ -12,6 +12,7 @@
 
 
 #define FLAG 0xFFFFFFFF
+ // Set ports and pullups
 Input::Input(): m_left(D0, PullUp), m_up(D2, PullUp), m_down(D3, PullUp), m_right(D4, PullUp) {
 }
 void Input::Init(osThreadId_t programThreadId){
@@ -40,6 +41,7 @@ void Input::InputLoop() {
         }
           osThreadFlagsClear(ANYBUTTONSTATE);
 
+          // Return state 0 if nothing is pressed or more than 1 is pressed
         if (pressedCount == 1) {
             osThreadFlagsSet(m_programThreadId, flag);
         } else {

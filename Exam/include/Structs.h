@@ -4,17 +4,23 @@
 #include <string>
 
 // Contains definitions of structs
+
+// String containing the fetched rss stream 
 struct RSSStream {
   Mutex mutex;
   std::string rss;
 }__attribute__((aligned(16)));
 
+
+// Struct containing fetched temperature
 struct TempHumid {
     Mutex mutex;
     float temp;
     float humid;
 } __attribute__((aligned(16)));
 
+
+// Struct containing fetched unix timestamp with the timezone offset
 struct Datetime {
     Mutex mutex;
     time_t timestamp;
@@ -22,6 +28,7 @@ struct Datetime {
     nsapi_error_t code;
 } __attribute__((aligned(16)));
 
+// Struct containing the fetched coordinates and city
 struct Location {
     Mutex mutex;
     double latitude;
@@ -29,12 +36,14 @@ struct Location {
     std::string city;
 } __attribute__((aligned(16)));
 
+// Struct containing the fetched weather description and temperature
 struct Weather {
     Mutex mutex;
     std::string description;
     float temp;
 } __attribute__((aligned(16)));
 
+// Struct containing information about the alarm such as when it is set and booleans regarding its state
 struct AlarmData {
     Mutex mutex;  
     int hour;
@@ -46,6 +55,7 @@ struct AlarmData {
 } __attribute__((aligned(16)));
 
 
+// Struct used for managing temporary variables used to change coordinates
 struct TempLocationChange {
     bool locationChanging = false;
     bool latitudeChanging = true;
@@ -54,17 +64,11 @@ struct TempLocationChange {
     std::string longitude;
 }__attribute__((aligned(16)));
 
-struct ClockData {
-    const char* day;
-    int date;
-    const char* month;
-    int hour;
-    int minute;
-};
 
+// Used to store state while editing alarm
 struct EditAlarm {
     bool editing;
     int hour;
     int minute;
-    int pos;             // posisjon for redigering (valgfritt om du vil støtte tegnredigering)
-};
+    int pos;             
+} __attribute__((aligned(16)));

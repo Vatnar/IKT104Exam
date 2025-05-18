@@ -41,6 +41,7 @@ void Display::EventLoop() {
             continue;  
         }
 
+        // Checks if flag count is valid
         if (__builtin_popcount((uint32_t)flags) != 1) {
             LOG("[Error] Multiple or zero flags set: 0x%08x\n", (uint32_t)flags);
             continue;
@@ -77,21 +78,16 @@ void Display::displayStartup() {
     lcd.setCursor(0, 1);
   // Må vente på at startuppen er ferdig først
 
-    // m_datetime.mutex.lock();
     lcd.printf("%d", m_datetime.timestamp);
-    // m_datetime.mutex.unlock();
 
-    // Dette må synkroniseres med API-en er ikke noe vits med unødvendig downtime, 
     ThisThread::sleep_for(2s);
     
     // Latitude longitude
     lcd.clear();
     lcd.setCursor(0, 0);
-    // m_location.mutex.lock();
     lcd.printf("Lat: %f", m_location.latitude);
     lcd.setCursor(0, 1);
     lcd.printf("Lon:  %f", m_location.longitude);
-    // m_location.mutex.unlock();
     
     ThisThread::sleep_for(2s);
 
@@ -133,23 +129,10 @@ void Display::displayTempHum() {
     LOG("[DEBUG] DISPLAYING TEMPHUM");
     lcd.clear();
     lcd.setCursor(0,0);
-    m_threadPtrMutex.lock();
-    if (m_threadPtr) {
-        if (m_threadPtr->get_state() != Thread::Deleted) {
-            LOG("[DEBUG] Joining sensor thread in Display");
-            m_threadPtr->join();
-        } else {
-            LOG("[DEBUG] Sensor thread already deleted");
-        }
-        m_threadPtr.reset(); // Ensure the pointer is reset after joining (or if already deleted)
-    } else {
-        LOG("[DEBUG] No sensor thread to join in Display");
-    }
-    m_threadPtrMutex.unlock();
-    // m_tempHumid.mutex.lock(); // Lås mutex for å lese sikkert
+     m_tempHumid.mutex.lock(); // Lås mutex for å lese sikkert
     float temp = m_tempHumid.temp;
     float humid = m_tempHumid.humid;
-    // m_tempHumid.mutex.unlock();
+     m_tempHumid.mutex.unlock();
 
     lcd.printf("Temp: %.1f C", temp);
     lcd.setCursor(0, 1);
@@ -178,7 +161,7 @@ void Display::displayNews() {
         m_threadPtr->join();
         m_threadPtr.reset();
     }
-
+    // Make a new thread for scrolling since display still needs to handle input event
     auto newThread = std::make_unique<Thread>();
     newThread->start([this] {
         this->scrollText();
@@ -187,6 +170,7 @@ void Display::displayNews() {
     SetThreadPointer(std::move(newThread));
 }
 
+// Displays coordinates
 void Display::setLocation() {
     lcd.clear();
     lcd.setCursor(0,0);
@@ -237,6 +221,7 @@ void Display::scrollText() {
     }
 }
 
+// Helper for updating time for display
 void Display::updateTime() {
     time_t now = time(NULL);
     now += m_datetime.offset * 3600 * 2;  // Juster med offset i sekunder

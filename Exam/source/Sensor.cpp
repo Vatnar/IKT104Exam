@@ -8,7 +8,7 @@ constexpr bool LOG_ENABLED = false;
 #define LOG(fmt, ...) LOG_IF(LOG_ENABLED, fmt, ##__VA_ARGS__)
 #define LINE() LINE_IF(LOG_ENABLED)
 
-
+// References to shared struct
 Sensor::Sensor(TempHumid &temphum) : m_i2c(PB_11, PB_10), m_hts221(&m_i2c), m_tempHumid(temphum) {
     m_hts221.enable();
     m_hts221.init(NULL);
@@ -17,7 +17,7 @@ Sensor::Sensor(TempHumid &temphum) : m_i2c(PB_11, PB_10), m_hts221(&m_i2c), m_te
 }
 
 
-void Sensor::getTempAndHum() {
+void Sensor::GetTempAndHum() {
     float temperature, humidity;
     m_hts221.get_temperature(&temperature);
     m_hts221.get_humidity(&humidity);

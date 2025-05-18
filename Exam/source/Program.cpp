@@ -32,6 +32,9 @@ Program::Program()
 
 
         m_state = State::STARTUP;   // set initial state
+
+        // Initializing data structs
+
         m_datetime.mutex.lock();
         m_datetime.code = NSAPI_ERROR_NO_MEMORY;
         m_datetime.offset = 0;
@@ -71,42 +74,54 @@ Program::Program()
     m_APIStartupThread.start([this]() { m_API.StartUp(); });
 
 
-        LOG("[INFO] Starting Display thread");
-        m_displayThread.start([this]() { m_display.EventLoop(); });
+    LOG("[INFO] Starting Display thread");
+    m_displayThread.start([this]() { m_display.EventLoop(); });
 
-        LOG("[INFO] Waiting for API startup to finish....");
-        m_APIStartupThread.join();
+    LOG("[INFO] Waiting for API startup to finish....");
+    m_APIStartupThread.join();
 
-        m_displayThread.flags_set((uint32_t)m_state);
+    m_displayThread.flags_set((uint32_t)m_state); // Update the thread flags of the display
 
-        if (m_datetime.code != NSAPI_ERROR_OK){
-            LOG("[WARN] Failed to get Timestamp");
-            m_datetime.mutex.lock();
-            LOG("[WARN] %d", m_datetime.code);
-            m_datetime.mutex.unlock();
-        } else {
+    if (m_datetime.code != NSAPI_ERROR_OK){
+        LOG("[WARN] Failed to get Timestamp");
         m_datetime.mutex.lock();
-        LOG("[INFO] Unix Timestamp: %d", m_datetime.timestamp);
-        LOG("[INFO] TIMEZONE OFFSET: %d", m_datetime.offset);
+        LOG("[WARN] %d", m_datetime.code);
         m_datetime.mutex.unlock();
-        }
-
-        // Initialize the rss struct right away
-
-        m_API.GetRSS();
-
-        LOG("WE HERE");
-        m_API.GetDailyForecastByCoordinates();
-        // Start inputhandler
-        LOG("Starting input handler thread");
-        osThreadId_t programThreadId = ThisThread::get_id();
-        m_inputThread.start([this, programThreadId]() {
-        m_input.Init(programThreadId);
-        m_input.InputLoop();
-        });
-
+    } else {
+    m_datetime.mutex.lock();
+    LOG("[INFO] Unix Timestamp: %d", m_datetime.timestamp);
+    LOG("[INFO] TIMEZONE OFFSET: %d", m_datetime.offset);
+    m_datetime.mutex.unlock();
     }
 
+    // Initialize the rss and weather struct right away
+
+    m_API.GetRSS();
+    m_API.GetDailyForecastByCoordinates();
+
+    // Start inputhandler
+    LOG("Starting input handler thread");
+    osThreadId_t programThreadId = ThisThread::get_id();
+    m_inputThread.start([this, programThreadId]() {
+    m_input.Init(programThreadId);
+    m_input.InputLoop();
+    });
+
+
+
+    // Create a routine that automatically updates rss and forecast
+    Thread updateWeatherandRSS;
+    updateWeatherandRSS.start([this] {
+        while (true) {
+        ThisThread::sleep_for(15min);
+        m_API.GetRSS();
+        m_API.GetDailyForecastByCoordinates();
+        }
+    });
+        
+    }
+
+    
     ButtonState Program::waitForSingleButtonPress() {
       int32_t flags = ThisThread::flags_wait_any(ANYBUTTONSTATE);
         if (flags < 0) {
@@ -118,22 +133,24 @@ Program::Program()
             LOG("[Error] Multiple or zero flags set: 0x%08x\n", (uint32_t)flags);
             return ButtonState::NONE;
         }
-
+        // Cast the flags into buttonstate for easier handling in switch statements
         return static_cast<ButtonState>(flags);
     }
 
 
-    void Program::handleAlarmActive(){
-    m_displayThread.flags_set((uint32_t)m_state);
+    void Program::handleAlarmActive() {
+        // update the state of display for displaying live clock still
+        m_displayThread.flags_set((uint32_t)m_state);
 
-    LOG("BEEERT");
-
+        // if autmute is not un while the alarm is active, start it
         if (m_alarmData.automute == false) {
         m_alarm.StartAutoMute();
             LOG("Started automute");
         }
 
         ButtonState buttonState = waitForSingleButtonPress();
+        // Left and UP (left side of buttons) snooze
+        // DOWN and RIGHT (right side of buttons) turn off the alarm (not disable, but mute it)
         switch (buttonState){
             case ButtonState::LEFT:
               m_alarmData.snoozed = true;
@@ -165,16 +182,14 @@ Program::Program()
                 break;
             default:
             break;
-            }
+        }
             
     }
 
     int Program::ProgramLoop() {
-        m_alarm.ScheduleNextAlarm();
-
         ButtonState buttonState;
-        m_state = State::SHOWALARM;
-        State previousState = State::STARTUP; // Track previous state
+        m_state = State::SHOWALARM; // Initial state (after startup)
+        State previousState = State::STARTUP; // Track previous state , for the display views that dont need updating
         int32_t flags = 0;
 
         while (true) {
@@ -188,20 +203,21 @@ Program::Program()
                 continue;
             }
 
-            if (m_state != previousState) {
-                m_displayThread.flags_set((uint32_t)m_state);
-                previousState = m_state;
-            }
-            if (m_state == State::SETLOC || m_state == State::EDITALARM || m_state == State::SHOWALARM || m_state == State::WEATHER) {
+            
+            // Update regardless for the given states
+            if (m_state == State::SETLOC || m_state == State::EDITALARM || m_state == State::SHOWALARM || m_state == State::WEATHER || m_state == State::TEMPHUMID) {
                 m_displayThread.flags_set((uint32_t)m_state);
             } else if (m_state != previousState) {
                 m_displayThread.flags_set((uint32_t)m_state);
                 previousState = m_state;
             }
+
+
+            // Pass responsibilities off to member functions
             switch (m_state) {
                 case State::STARTUP:      startup();      break;
                 case State::SHOWALARM:    showalarm();    break;
-                case State::EDITALARM:      editAlarm();  break;
+                case State::EDITALARM:    editAlarm();  break;
                 case State::TEMPHUMID:    temphumid();    break;
                 case State::WEATHER:      weather();      break;
                 case State::SETLOC:       setloc();       break;
@@ -218,6 +234,10 @@ Program::Program()
 
     void Program::startup() { m_state = State::SHOWALARM; }
 
+
+    // The following functions handle how the input should behave based on
+    // display view selected
+    
 void Program::showalarm(){
     
     ButtonState buttonState = waitForSingleButtonPress();
@@ -229,6 +249,7 @@ void Program::showalarm(){
     }
 }
 
+// Alarm editing logic
 void Program::toggleAlarm() {
   if (m_alarmData.enabled)
     m_alarmData.enabled = false;
@@ -306,14 +327,7 @@ void Program::alarmDown() {
 
 
 void Program::temphumid(){
-
-
-        auto thread = std::make_unique<Thread>();
-        thread->start([this] {
-            m_sensor.GetTempAndHum();
-        });
-
-        m_display.SetThreadPointer(std::move(thread));
+        m_sensor.GetTempAndHum();
         ButtonState buttonState = waitForSingleButtonPress();
 
         switch(buttonState){
@@ -322,7 +336,9 @@ void Program::temphumid(){
             case ButtonState::UP:       LOG("No action\n");          break;
             case ButtonState::DOWN:     LOG("No action\n");          break;
         }
-    }
+}
+
+
     void Program::weather(){
 
         ButtonState buttonState = waitForSingleButtonPress();
@@ -336,7 +352,7 @@ void Program::temphumid(){
         m_location.mutex.unlock();
     }
 
-    // TODO implement location thing.
+    // Adjust coordinates manually
     void Program::setloc(){
 
         if (m_tlc.locationChanging == false) {
@@ -390,7 +406,7 @@ void Program::temphumid(){
         char& ch = currentStr[m_tlc.pos];
 
         if (m_tlc.pos == 0) {
-          ch = ch == '-' ? ' ' : '-';
+          ch = ch == '-' ? ' ' : '-'; // if its a minus then remove, if not then put a -
 
         }
 
@@ -417,17 +433,19 @@ void Program::temphumid(){
         m_tlc.locationChanging = false;
 
         m_location.mutex.lock();
-        m_location.latitude = std::stod(m_tlc.latitude);
-        m_location.longitude = std::stod(m_tlc.longitude);
+        m_location.latitude = std::stod(m_tlc.latitude); // Converts to double
+        m_location.longitude = std::stod(m_tlc.longitude); // Converts to double
 
-        m_location.latitude = std::max(-90.0, std::min(90.0, m_location.latitude));
-        m_location.longitude = std::max(-180.0, std::min(180.0, m_location.longitude));
+        m_location.latitude = std::max(-90.0, std::min(90.0, m_location.latitude)); // Clamps latitude between -90 and 90
+        m_location.longitude = std::max(-180.0, std::min(180.0, m_location.longitude)); // Clamps longitude between -180 and 180
         
         m_location.mutex.unlock();
+
+        // Update datetime and forecast based on new coordinate
         m_API.GetDateTimeByCoordinates();
         m_API.GetDailyForecastByCoordinates();
         
-        m_state = State::WEATHER;
+        m_state = State::WEATHER; // go back to weather views
     }
 
     void Program::news(){

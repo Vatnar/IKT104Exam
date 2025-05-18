@@ -54,6 +54,7 @@ void API::connectWiFi() {
     }
 }
 
+// Retries if failed
 void API::connectToHost(TCPSocket &socket, const char *hostname) {
     const int MAX_DNS_RETRIES = 3;
     const int MAX_CONNECT_RETRIES = 3;
@@ -115,6 +116,7 @@ std::string API::getTimezoneData(Socket &socket ) {
   // TODO Perhaps put in env for code style
     const char *api_key = "dd8232f6deda47b7a1bf3eeb2512129d";
 
+    // Sends a request to the server
     char request[512];
     snprintf(request, sizeof(request),
              "GET /v2/timezone?apiKey=%s HTTP/1.1\r\n"
@@ -196,7 +198,7 @@ void API::StartUp() {
     parseJSON(j, buffer.c_str());
 
 
-
+    // Json is validated that it actually contains the information requested
 
     LOG("%d", (int)j["time_zone"]["date_time_unix"]);
 
@@ -356,6 +358,7 @@ void API::GetDailyForecastByCoordinates() {
 
     const char *api_key = "9a370cb3212a5d999fb46e975d41bd72";
 
+    // Requests forecast
     char request[512];
     m_location.mutex.lock();
     snprintf(request, sizeof(request),
@@ -412,7 +415,7 @@ void API::GetRSS() {
     std::unique_ptr<TCPSocket> socket = std::make_unique<TCPSocket>();
     connectToHost(*socket, "rss.cnn.com");
 
-    LOG("YES");
+    // Request topstories from cnn
     const char *request = "GET /rss/cnn_topstories.rss HTTP/1.1\r\n"
                           "Host: rss.cnn.com\r\n"
                           "Connection: close\r\n\r\n";
@@ -430,6 +433,7 @@ void API::GetRSS() {
     char temp[512];             
     int bytes_received = 0;
 
+    // Recieve and extract 3 stories
     while ((bytes_received = socket->recv(temp, sizeof(temp))) > 0) {
         recv_buffer.append(temp, bytes_received);
 
@@ -473,7 +477,7 @@ void API::GetRSS() {
     m_rssstream.mutex.lock();
     m_rssstream.rss = std::move(result);
     m_rssstream.mutex.unlock();
-LOG("YES");
+    LOG("YES");
     socket->close();
 }
 
@@ -511,6 +515,7 @@ void API::parseJSON(json &j, const char *buffer) {
     j = json::parse(s);
 }
 
+// Deletes heap allocated object
 API::~API() {
   delete m_address;
 }

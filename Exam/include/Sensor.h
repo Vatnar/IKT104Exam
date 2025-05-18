@@ -7,8 +7,10 @@
 
 class Sensor {
 public:
+    // Takes a reference to a temphumid struct that program owns
     Sensor(TempHumid &temphum);
-    
+
+    // Caller can fetch temperature and humidity
     void GetTempAndHum();
 
 private:

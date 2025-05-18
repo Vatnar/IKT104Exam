@@ -11,61 +11,77 @@
 
 class Program {
 public:
+    // Initializes the program and member variables and starts the startupsequence and 15 minute interval for updating rss and weather
     Program();
+
+    // Handles input, and most program logic in an infinite loop
     int ProgramLoop();
-    
-private:
+
+  private:
+    // Helper function for getting input
     ButtonState waitForSingleButtonPress();
+
+
     void startup();
+
+    // Runs instead of normal input handling whenever the alarm is currently ringing (active)
     void handleAlarmActive();
+
+    // Different views to choose from
     void showalarm();
-    void editenabled();
     void temphumid();
     void weather();
     void news();
 
-
+    // Setting coordinates manually
     void setloc();
     void locleft();
     void locright();
     void locup();
     void locdown();
 
+
+    // Editing alarm
     void editAlarm();
     void alarmUp();
     void alarmDown();
     void alarmLeft();
     void alarmRight();
     void toggleAlarm();
-    
+
+
+    // Internal states in program
     State m_state;
-    Display m_display;
-    Thread m_displayThread;
 
-    TempHumid m_tempHumid;
-    Sensor m_sensor;
-    
-    Datetime m_datetime;
-    Weather m_weather;
-    RSSStream m_rssstream;
-    
-    API m_API;
-    Thread m_APIStartupThread;
-
+    // Instanitation of classes
     Input m_input;
+    Display m_display;
+    Sensor m_sensor;
+    API m_API;
+    Alarm m_alarm;
+
+
+    // Concurrent threads to run
+    Thread m_displayThread;
+    Thread m_APIStartupThread;
     Thread m_inputThread;
 
 
-    // Coordinate stuff
+    // Data structs
+    TempHumid m_tempHumid;
+    Datetime m_datetime;
+    Weather m_weather;
+    RSSStream m_rssstream;
+
+    // Coordinate structs
     Location m_location;
     TempLocationChange m_tlc;
-    
-    Alarm m_alarm;
-    AlarmData m_alarmData;
-    Timeout m_alarmTimeout;
-    Timeout m_autoMute;
 
+    // Structs for Alarm
+    AlarmData m_alarmData;
     EditAlarm m_editAlarm;
 
-        
+    // Timeouts for alarm
+    Timeout m_alarmTimeout;
+    Timeout m_autoMute;
 };
