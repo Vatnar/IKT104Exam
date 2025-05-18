@@ -244,7 +244,6 @@ void Program::editAlarm() {
         m_editAlarm.minute = m_alarmData.minute;
         m_alarmData.mutex.unlock();
         m_editAlarm.pos = 0;
-        m_editAlarm.editingHour = true;
     }
 
     ButtonState buttonState = waitForSingleButtonPress();
@@ -261,16 +260,13 @@ void Program::editAlarm() {
 
 void Program::alarmLeft() {
     if (m_editAlarm.pos == 0) {
-        m_editAlarm.editingHour = !m_editAlarm.editingHour;
+        return;
     }
-    m_editAlarm.pos = (m_editAlarm.pos - 1 + 2) % 2;
+    m_editAlarm.pos--;
 }
 
 void Program::alarmRight() {
-    if ((m_editAlarm.editingHour && m_editAlarm.pos == 1) ||
-        (!m_editAlarm.editingHour && m_editAlarm.pos == 1)) {
-        m_editAlarm.editingHour = !m_editAlarm.editingHour;
-        m_editAlarm.pos = 0;
+    if (m_editAlarm.pos > 3) {
         return;
     }
     m_editAlarm.pos++;
@@ -301,6 +297,8 @@ void Program::alarmDown() {
     LOG("Saving edited alarm...");
 
     m_editAlarm.editing = false;
+    m_alarmData.enabled = true;
+    m_alarm.scheduleNextAlarm();
     m_state = State::SHOWALARM;
 }
 

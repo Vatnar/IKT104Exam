@@ -61,12 +61,9 @@ struct ClockData {
     int minute;
 };
 
-#pragma once
-
 struct EditAlarm {
-    bool editing = false;
+    bool editing;
     int hour;
     int minute;
-    bool editingHour = true; // true = redigerer time, false = redigerer minutt
-    int pos = 0;             // posisjon for redigering (valgfritt om du vil støtte tegnredigering)
+    int pos;             // posisjon for redigering (valgfritt om du vil støtte tegnredigering)
 };

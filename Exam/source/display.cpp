@@ -114,7 +114,7 @@ void Display::m_displayAlarm() {
     lcd.setCursor(0, 1);
 
     if (m_editAlarm.editing)
-        lcd.printf("Alarm (E)   %02i:%02i", m_alarm.hour, m_alarm.minute);
+        lcd.printf("Alarm (E)  %02i:%02i", m_alarm.hour, m_alarm.minute);
     else {
         if (m_alarm.snoozed) {
             lcd.printf("Alarm (S)  %02i:%02i", m_alarm.hour, m_alarm.minute);
