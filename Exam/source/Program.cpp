@@ -1,11 +1,11 @@
-#include "program.h"
+#include "Program.h"
 #include <mbed.h>
 #include <stdio.h>
 #include <string>
 #include "Logger.h"
 #include "API.h"
-#include "structs.h"
-#include "sensor.h"
+#include "Structs.h"
+#include "Sensor.h"
 #include "Display.h"
 
     constexpr bool LOG_ENABLED = false;
@@ -123,13 +123,13 @@ Program::Program()
     }
 
 
-    void Program::CheckAlarmStatus(){
+    void Program::handleAlarmActive(){
     m_displayThread.flags_set((uint32_t)m_state);
 
     LOG("BEEERT");
 
         if (m_alarmData.automute == false) {
-        m_alarm.startAutoMute();
+        m_alarm.StartAutoMute();
             LOG("Started automute");
         }
 
@@ -137,21 +137,21 @@ Program::Program()
         switch (buttonState){
             case ButtonState::LEFT:
               m_alarmData.snoozed = true;
-            m_alarm.stopAutoMute();
-            m_alarm.snooze();
+            m_alarm.StopAutoMute();
+            m_alarm.Snooze();
             m_alarm.m_buzzer.write(0.0);
                 break;
             case ButtonState::RIGHT:
             m_alarmData.active = false;
             LOG("TURNED OFF");
             m_alarm.m_buzzer.write(0.0);
-            m_alarm.stopAutoMute();
-                m_alarm.scheduleNextAlarm();
+            m_alarm.StopAutoMute();
+                m_alarm.ScheduleNextAlarm();
                 break;
             case ButtonState::UP:
                 m_alarmData.snoozed = true;
-                m_alarm.snooze();
-            m_alarm.stopAutoMute();
+                m_alarm.Snooze();
+            m_alarm.StopAutoMute();
 
                 m_alarm.m_buzzer.write(0.0);
                 break;
@@ -159,9 +159,9 @@ Program::Program()
             m_alarmData.active = false;
             LOG("TURNED OFF");
             m_alarm.m_buzzer.write(0.0);
-            m_alarm.stopAutoMute();
+            m_alarm.StopAutoMute();
 
-                m_alarm.scheduleNextAlarm();
+                m_alarm.ScheduleNextAlarm();
                 break;
             default:
             break;
@@ -170,7 +170,7 @@ Program::Program()
     }
 
     int Program::ProgramLoop() {
-        m_alarm.scheduleNextAlarm();
+        m_alarm.ScheduleNextAlarm();
 
         ButtonState buttonState;
         m_state = State::SHOWALARM;
@@ -184,7 +184,7 @@ Program::Program()
                     m_displayThread.flags_set((uint32_t)m_state);
                     previousState = m_state;
                 }
-                CheckAlarmStatus();
+                handleAlarmActive();
                 continue;
             }
 
@@ -300,7 +300,7 @@ void Program::alarmDown() {
     m_alarmData.mutex.unlock();
 
     m_editAlarm.editing = false;      // avslutt edit-modus
-    m_alarm.scheduleNextAlarm();      // planlegg ny trigger
+    m_alarm.ScheduleNextAlarm();      // planlegg ny trigger
     m_state = State::SHOWALARM;
 }
 
@@ -310,7 +310,7 @@ void Program::temphumid(){
 
         auto thread = std::make_unique<Thread>();
         thread->start([this] {
-            m_sensor.getTempAndHum();
+            m_sensor.GetTempAndHum();
         });
 
         m_display.SetThreadPointer(std::move(thread));
@@ -369,7 +369,7 @@ void Program::temphumid(){
     
 
         m_tlc.pos--; // move back one character
-
+        }
     }
     void Program::locright() {
         LOG("%s", m_tlc.latitudeChanging ? m_tlc.latitude.c_str() : m_tlc.longitude.c_str());
@@ -384,7 +384,6 @@ void Program::temphumid(){
         m_tlc.pos++; // move forward one character
     }
 
-    }
     void Program::locup() {
         std::string& currentStr = m_tlc.latitudeChanging ? m_tlc.latitude : m_tlc.longitude;
 

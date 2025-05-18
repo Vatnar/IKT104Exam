@@ -1,7 +1,6 @@
 #pragma once
 #include <mbed.h>   
 
-// InterruptIn kan ikke være medlemsvariabler så de må bli deklarert her.
 
 class Input{
 

@@ -1,6 +1,6 @@
 #pragma once
 #include "DFRobot_RGBLCD1602/DFRobot_RGBLCD1602.h"
-#include "structs.h"
+#include "Structs.h"
 
 class Display
 {
@@ -24,18 +24,18 @@ private:
 };
 
     
-    void m_initDisplay();
+    void initDisplay();
 
-    void m_displayStartup();        // The functions are set as private because they
+    void displayStartup();        // The functions are set as private because they
     void m_displayDateTime();       // are only being used by the public methods in the class
-    void m_displayTempHum();
-    void m_displayWeather();
-    void m_displayNews();
-    void m_displayAlarm();
-    void m_setLocation();
+    void displayTempHum();
+    void displayWeather();
+    void displayNews();
+    void displayAlarm();
+    void setLocation();
 
-    void m_scrollText();
-    void m_updateTime();
+    void scrollText();
+    void updateTime();
 
 
 

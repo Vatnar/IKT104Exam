@@ -3,7 +3,7 @@
 #include "States.h"
 #include "Logger.h"
 #include <string>
-#include "structs.h"
+#include "Structs.h"
 #include <chrono>
 #include <ctime>
 
@@ -57,18 +57,18 @@ void Display::EventLoop() {
 
 state = static_cast<State>(flags);
 switch (state) {
-            case State::STARTUP:        m_displayStartup();     break;
-            case State::SHOWALARM:      m_displayAlarm();       break;
-            case State::EDITALARM:      m_displayAlarm();       break;
-            case State::TEMPHUMID:      m_displayTempHum();     break;
-            case State::WEATHER:        m_displayWeather();     break;
-            case State::NEWS:           m_displayNews();        break;
-            case State::SETLOC:         m_setLocation();        break;
+            case State::STARTUP:        displayStartup();     break;
+            case State::SHOWALARM:      displayAlarm();       break;
+            case State::EDITALARM:      displayAlarm();       break;
+            case State::TEMPHUMID:      displayTempHum();     break;
+            case State::WEATHER:        displayWeather();     break;
+            case State::NEWS:           displayNews();        break;
+            case State::SETLOC:         setLocation();        break;
         }
     }
 }
 
-void Display::m_displayStartup() {
+void Display::displayStartup() {
 
     LOG("[DEBUG] DISPLAYING STARTUP");
     // Unix epoch time
@@ -104,10 +104,10 @@ void Display::m_displayStartup() {
     ThisThread::sleep_for(2s);
 }
 
-void Display::m_displayAlarm() {
+void Display::displayAlarm() {
     LOG("[DEBUG] DISPLAYING ALARM");
 
-    m_updateTime();
+    updateTime();
 
     lcd.clear();
     lcd.setCursor(0, 0);
@@ -129,7 +129,7 @@ void Display::m_displayAlarm() {
     }
 }
 
-void Display::m_displayTempHum() {
+void Display::displayTempHum() {
     LOG("[DEBUG] DISPLAYING TEMPHUM");
     lcd.clear();
     lcd.setCursor(0,0);
@@ -156,7 +156,7 @@ void Display::m_displayTempHum() {
     lcd.printf("Humid: %.1f%%", humid);
 }
 
-void Display::m_displayWeather() {
+void Display::displayWeather() {
     lcd.clear();
     lcd.setCursor(0,0);
     
@@ -167,7 +167,7 @@ void Display::m_displayWeather() {
      m_weather.mutex.unlock();
 }
 
-void Display::m_displayNews() {
+void Display::displayNews() {
       lcd.clear();
     lcd.setCursor(0, 0);
     lcd.printf("CNN");
@@ -181,13 +181,13 @@ void Display::m_displayNews() {
 
     auto newThread = std::make_unique<Thread>();
     newThread->start([this] {
-        this->m_scrollText();
+        this->scrollText();
     });
 
     SetThreadPointer(std::move(newThread));
 }
 
-void Display::m_setLocation() {
+void Display::setLocation() {
     lcd.clear();
     lcd.setCursor(0,0);
     lcd.printf("%s", m_tlc.latitude.c_str());
@@ -196,7 +196,7 @@ void Display::m_setLocation() {
 }
 
 // Oppdatert m_scrollText med sømløs looping, padding og 200ms speed
-void Display::m_scrollText() {
+void Display::scrollText() {
     std::string text = m_rssstream.rss;
     constexpr size_t windowSize = 16;
     const size_t length = text.length();
@@ -237,7 +237,7 @@ void Display::m_scrollText() {
     }
 }
 
-void Display::m_updateTime() {
+void Display::updateTime() {
     time_t now = time(NULL);
     now += m_datetime.offset * 3600 * 2;  // Juster med offset i sekunder
     struct tm *localTime = localtime(&now);

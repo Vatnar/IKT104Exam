@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <NetworkInterface.h>
 #include "json.hpp"
-#include "structs.h"
+#include "Structs.h"
 using json = nlohmann::json;
 
 

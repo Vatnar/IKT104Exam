@@ -1,7 +1,7 @@
 #include "mbed.h"
 #include "DFRobot_RGBLCD1602.h"
 #include "HTS221Sensor.h"
-#include "sensor.h"
+#include "Sensor.h"
 #include "Logger.h"
 constexpr bool LOG_ENABLED = false;
 

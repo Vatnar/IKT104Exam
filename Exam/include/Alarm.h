@@ -1,6 +1,6 @@
 #pragma once
 
-#include "structs.h"
+#include "Structs.h"
 #include <functional>
 #include <chrono>
 #include "mbed.h"
@@ -12,11 +12,11 @@ public:
 
     Alarm(AlarmData& alarmData, Timeout &alarm,Timeout &autoMute, Datetime &datetime);
 
-    void scheduleNextAlarm();
-    void snooze();
-    void startAutoMute();
-    void stopAutoMute();
-    void triggerAlarmCB();
+    void ScheduleNextAlarm();
+    void Snooze();
+    void StartAutoMute();
+    void StopAutoMute();
+    void TriggerAlarmCB();
     PwmOut  m_buzzer;
 
 private:

@@ -1,4 +1,4 @@
-#include "alarm.h"
+#include "Alarm.h"
 #include <ctime>
 #include "Logger.h"
 

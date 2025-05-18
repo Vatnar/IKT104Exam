@@ -2,11 +2,11 @@
 #include <mbed.h>
 #include "Input.h"
 #include "States.h"
-#include "display.h"
+#include "Display.h"
 #include "API.h"
-#include "sensor.h"
-#include "structs.h"
-#include "alarm.h"
+#include "Sensor.h"
+#include "Structs.h"
+#include "Alarm.h"
 
 
 class Program {
@@ -17,7 +17,7 @@ public:
 private:
     ButtonState waitForSingleButtonPress();
     void startup();
-    void CheckAlarmStatus();
+    void handleAlarmActive();
     void showalarm();
     void editenabled();
     void temphumid();

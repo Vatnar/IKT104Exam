@@ -2,14 +2,14 @@
 #include "mbed.h"
 #include "DFRobot_RGBLCD1602.h"
 #include "HTS221Sensor.h"
-#include "structs.h"
+#include "Structs.h"
 
 
 class Sensor {
 public:
     Sensor(TempHumid &temphum);
     
-    void getTempAndHum();
+    void GetTempAndHum();
 
 private:
     TempHumid &m_tempHumid;
