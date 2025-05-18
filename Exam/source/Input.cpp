@@ -18,39 +18,35 @@ void Input::Init(osThreadId_t programThreadId){
     m_programThreadId = programThreadId;
 }
 void Input::InputLoop() {
-  while (true) {
-    if (!m_left.read()) {
-            osThreadFlagsClear(ANYBUTTONSTATE);
-            auto result = osThreadFlagsSet(m_programThreadId, uint32_t(ButtonState::LEFT));
-            ThisThread::sleep_for(200ms);
-            continue;
+    while (true) {
+        uint32_t flag = uint32_t(ButtonState::NONE);
+        int pressedCount = 0;
 
+        if (!m_left.read()) {
+            flag = uint32_t(ButtonState::LEFT);
+            pressedCount++;
         }
         if (!m_up.read()) {
-            osThreadFlagsClear(ANYBUTTONSTATE);
-            auto result = osThreadFlagsSet(m_programThreadId, uint32_t(ButtonState::UP));
-            ThisThread::sleep_for(200ms);
-            continue;
-
+            flag = uint32_t(ButtonState::UP);
+            pressedCount++;
         }
         if (!m_down.read()) {
-            osThreadFlagsClear(ANYBUTTONSTATE);
-          
-            auto result = osThreadFlagsSet(m_programThreadId, uint32_t(ButtonState::DOWN));
-            ThisThread::sleep_for(200ms);
-            continue;
-
+            flag = uint32_t(ButtonState::DOWN);
+            pressedCount++;
         }
         if (!m_right.read()) {
-            osThreadFlagsClear(ANYBUTTONSTATE);
-          
-            auto result = osThreadFlagsSet(m_programThreadId, uint32_t(ButtonState::RIGHT));
-            ThisThread::sleep_for(200ms);
-            continue;
+            flag = uint32_t(ButtonState::RIGHT);
+            pressedCount++;
         }
-            osThreadFlagsClear(ANYBUTTONSTATE);
+          osThreadFlagsClear(ANYBUTTONSTATE);
 
-        osThreadFlagsSet(m_programThreadId, uint32_t(ButtonState::NONE));
+        if (pressedCount == 1) {
+            osThreadFlagsSet(m_programThreadId, flag);
+        } else {
+            osThreadFlagsSet(m_programThreadId, uint32_t(ButtonState::NONE));
+        }
+
         ThisThread::sleep_for(200ms);
     }
 }
+

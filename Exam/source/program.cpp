@@ -127,25 +127,31 @@
         ButtonState buttonState = waitForSingleButtonPress();
         switch (buttonState){
             case ButtonState::LEFT:
-            m_alarmData.snoozed = true;
+              m_alarmData.snoozed = true;
+            m_alarm.stopAutoMute();              
             m_alarm.snooze();
-            m_alarm.m_buzzer.write(0);
+            m_alarm.m_buzzer.write(0.0);
                 break;
             case ButtonState::RIGHT:
             m_alarmData.active = false;
             LOG("TURNED OFF");
-            m_alarm.m_buzzer.write(0);
+            m_alarm.m_buzzer.write(0.0);
+            m_alarm.stopAutoMute();              
                 m_alarm.scheduleNextAlarm();     
                 break;
             case ButtonState::UP:       
                 m_alarmData.snoozed = true;
                 m_alarm.snooze();
-                m_alarm.m_buzzer.write(0);
+            m_alarm.stopAutoMute();              
+
+                m_alarm.m_buzzer.write(0.0);
                 break;
             case ButtonState::DOWN:
             m_alarmData.active = false;
             LOG("TURNED OFF");
-            m_alarm.m_buzzer.write(0);
+            m_alarm.m_buzzer.write(0.0);
+            m_alarm.stopAutoMute();              
+
                 m_alarm.scheduleNextAlarm();     
                 break;
             default:
@@ -160,37 +166,52 @@
 
         ButtonState buttonState;
         m_state = State::SHOWALARM;
+        State previousState = State::STARTUP; // Track previous state
         int32_t flags = 0;
 
         while (true) {
-        if (m_alarmData.active) {
-            m_state = State::SHOWALARM;
-            m_displayThread.flags_set((uint32_t)m_state);
-            CheckAlarmStatus();
-            
-            continue;
+            if (m_alarmData.active) {
+                m_state = State::SHOWALARM;
+                if (m_state != previousState) {
+                    m_displayThread.flags_set((uint32_t)m_state);
+                    previousState = m_state;
+                }
+                CheckAlarmStatus();
+                continue;
+            }
+
+            if (m_state != previousState) {
+                m_displayThread.flags_set((uint32_t)m_state);
+                previousState = m_state;
+            }
+            if (m_state == State::SETLOC) {
+                m_displayThread.flags_set((uint32_t)m_state);
+            } else if (m_state != previousState) {
+                m_displayThread.flags_set((uint32_t)m_state);
+                previousState = m_state;
+            }
+            switch (m_state) {
+                case State::STARTUP:      startup();      break;
+                case State::SHOWALARM:    showalarm();    break;
+                case State::EDITHOUR:     edithour();     break;
+                case State::EDITMINUTE:   editminute();   break;
+                case State::EDITENABLED:  editenabled();  break;
+                case State::TEMPHUMID:    temphumid();    break;
+                case State::WEATHER:      weather();      break;
+                case State::SETLOC:       setloc();       break;
+                case State::NEWS:         news();         break;
+                default:
+                    LOG("[Error] Unknown state %d\n", static_cast<int>(m_state));
+                    break;
+            }
         }
-            m_displayThread.flags_set((uint32_t)m_state);
-            
-            switch (m_state){
-                case State::STARTUP:        startup();      break;
-                case State::SHOWALARM:      showalarm();    break;
-                case State::EDITHOUR:       edithour();     break;
-                case State::EDITMINUTE:     editminute();   break;
-                case State::EDITENABLED:    editenabled();  break;
-                case State::TEMPHUMID:      temphumid();    break;
-                case State::WEATHER:        weather();      break;
-                case State::SETLOC:         setloc();       break;
-                case State::NEWS:           news();         break;
-                default: LOG("[Error] Unknown state %d\n", static_cast<int>(m_state)); break;
-            }        
-        }
+
         return 0;
     }
+
     void Program::startup() { m_state = State::SHOWALARM; }
 
     void Program::showalarm(){
-        LOG("STATE: SHOW ALARM\n");
         
         ButtonState buttonState = waitForSingleButtonPress();
         switch(buttonState){
@@ -203,7 +224,6 @@
 
     }
     void Program::editenabled(){
-        LOG("STATE: EDITENABLED\n");
 
         ButtonState buttonState = waitForSingleButtonPress();
 
@@ -215,7 +235,6 @@
         }   
     }
     void Program::edithour(){
-        LOG("STATE: EDITHOUR\n");
 
         ButtonState buttonState = waitForSingleButtonPress();
         
@@ -228,7 +247,6 @@
 
     }
     void Program::editminute(){
-        LOG("STATE: EDITMINUTE\n");
 
 
         ButtonState buttonState = waitForSingleButtonPress();
@@ -243,7 +261,6 @@
 
     void Program::temphumid(){
 
-    LOG("STATE: TEMPHUMID\n");
 
     
         auto thread = std::make_unique<Thread>();
@@ -262,7 +279,6 @@
         }
     }
     void Program::weather(){
-        LOG("STATE: WEATHER\n");
 
 
         ButtonState buttonState = waitForSingleButtonPress();
@@ -278,7 +294,6 @@
 
     // TODO implement location thing.
     void Program::setloc(){
-    LOG("STATE: SETLOC\n");
         
         if (m_tlc.locationChanging == false) {
             m_tlc.locationChanging = true;
@@ -302,7 +317,8 @@
 
     void Program::locleft() {
         if (m_tlc.pos == 0) {
-            m_tlc.latitudeChanging = !m_tlc.latitudeChanging;
+          m_tlc.latitudeChanging = !m_tlc.latitudeChanging;
+          return;
         }
 
         m_tlc.pos--; // move back one character
@@ -355,7 +371,6 @@
     }
 
     void Program::news(){
-        LOG("STATE: NEWS\n");
 
         // TODO send to display
 

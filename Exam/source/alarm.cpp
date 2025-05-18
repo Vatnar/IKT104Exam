@@ -43,8 +43,6 @@ void Alarm::scheduleNextAlarm() {
     if (diff <= 0) diff += 24 * 3600;
 
 
-    // TODO REMOVE THIS
-    diff = 500;
     // Convert diff seconds to chrono duration
     auto delay = duration<double>(diff);
 
@@ -70,7 +68,7 @@ void Alarm::triggerAlarmCB() {
     m_alarmData.snoozed = false;    
     
     // Start buzzer
-    m_buzzer.period(0.01);
+    m_buzzer.period(0.001);
     m_buzzer.write(0.9);    
 }
 
@@ -79,6 +77,10 @@ void Alarm::startAutoMute() {
   auto delay = 10s;
   m_autoMute.detach();
     m_autoMute.attach(callback(this, &Alarm::autoMuteCB), delay.count());
+}
+void Alarm::stopAutoMute() {
+  m_alarmData.automute = false;
+  m_autoMute.detach();
 }
 // Intern: auto-mute etter utløpstid
 void Alarm::autoMuteCB() {

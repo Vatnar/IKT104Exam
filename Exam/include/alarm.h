@@ -15,7 +15,7 @@ public:
     void scheduleNextAlarm();
     void snooze();
     void startAutoMute();
-
+    void stopAutoMute();
     void triggerAlarmCB();
     PwmOut  m_buzzer;
 
