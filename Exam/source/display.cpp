@@ -114,17 +114,16 @@ void Display::m_displayAlarm() {
     lcd.setCursor(0, 1);
 
     if (m_editAlarm.editing)
-        lcd.printf("Alarm (E)  %02i:%02i", m_alarm.hour, m_alarm.minute);
+        lcd.printf("Alarm (E)  %02i:%02i", m_editAlarm.hour, m_editAlarm.minute);
     else {
-        if (m_alarm.snoozed) {
+        if (m_alarm.snoozed)
             lcd.printf("Alarm (S)  %02i:%02i", m_alarm.hour, m_alarm.minute);
-        } else if (m_alarm.active) {
+        if (m_alarm.active)
             lcd.printf("Alarm (A)  %02i:%02i", m_alarm.hour, m_alarm.minute);
-        } else if (m_alarm.enabled) {
+        if (m_alarm.enabled)
             lcd.printf("Alarm      %02i:%02i", m_alarm.hour, m_alarm.minute);
-        } else {
-            lcd.printf("Alarm OFF");
-        }
+        else 
+            lcd.printf("%-16s", "Alarm OFF");
     }
 }
 

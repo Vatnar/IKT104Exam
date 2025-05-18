@@ -59,11 +59,6 @@ Program::Program()
     m_tlc.latitudeChanging = true;
     m_tlc.pos = 0;
 
-    std::string m_editAlarmTime = "0730";  // Startverdi
-    int m_editAlarmPos = 0;                     // Posisjon mellom 0 og 3
-    bool m_editingAlarmTime = false;
-
-
 
     LOG("[INFO] Starting API startup thread");
     m_APIStartupThread.start([this]() { m_API.StartUp(); });
@@ -292,15 +287,20 @@ void Program::alarmUp() {
     if (m_editAlarm.minute > 59) m_editAlarm.minute = 0;
 }
 
-
 void Program::alarmDown() {
     LOG("Saving edited alarm...");
 
-    m_editAlarm.editing = false;
+    m_alarmData.mutex.lock();
+    m_alarmData.hour   = m_editAlarm.hour;
+    m_alarmData.minute = m_editAlarm.minute;
     m_alarmData.enabled = true;
-    m_alarm.scheduleNextAlarm();
+    m_alarmData.mutex.unlock();
+
+    m_editAlarm.editing = false;      // avslutt edit-modus
+    m_alarm.scheduleNextAlarm();      // planlegg ny trigger
     m_state = State::SHOWALARM;
 }
+
 
 void Program::temphumid(){
 
