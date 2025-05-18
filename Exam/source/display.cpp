@@ -1,5 +1,5 @@
 #include "mbed-os/mbed.h"
-#include "display.h"
+#include "Display.h"
 #include "States.h"
 #include "Logger.h"
 #include <string>
@@ -9,13 +9,13 @@
 
 using namespace std::chrono_literals;
 
-constexpr bool LOG_ENABLED = true;
+constexpr bool LOG_ENABLED = false;
 
 #define LOG(fmt, ...) LOG_IF(LOG_ENABLED, fmt, ##__VA_ARGS__)
 
 Display::Display(TempHumid & tempHumid, Location & coordinate,
-        Datetime & datetime, Weather &weather, RSSStream &rssstream, TempLocationChange &tlc, EditAlarm &editAlarm): lcdI2C(D14, D15), lcd( & lcdI2C),
-         m_tempHumid(tempHumid), m_location(coordinate), m_datetime(datetime), m_weather(weather), m_rssstream(rssstream), m_tlc(tlc), m_editAlarm(editAlarm) {
+        Datetime & datetime, Weather &weather, RSSStream &rssstream, TempLocationChange &tlc, EditAlarm &editAlarm, AlarmData &alarmData): lcdI2C(D14, D15), lcd( & lcdI2C),
+         m_tempHumid(tempHumid), m_location(coordinate), m_datetime(datetime), m_weather(weather), m_rssstream(rssstream), m_tlc(tlc), m_editAlarm(editAlarm), m_alarmData(alarmData) {
         lcd.init();
         thread_sleep_for(80); // Trenger sleep for å initialisere LCD-displayet
         lcd.clear();
@@ -116,17 +116,16 @@ void Display::m_displayAlarm() {
     lcd.setCursor(0, 1);
 
     if (m_editAlarm.editing)
-        lcd.printf("Alarm (E)  %02i:%02i", m_alarm.hour, m_alarm.minute);
+        lcd.printf("Alarm (E)  %02i:%02i", m_editAlarm.hour, m_editAlarm.minute);
     else {
-        if (m_alarm.snoozed) {
-            lcd.printf("Alarm (S)  %02i:%02i", m_alarm.hour, m_alarm.minute);
-        } else if (m_alarm.active) {
-            lcd.printf("Alarm (A)  %02i:%02i", m_alarm.hour, m_alarm.minute);
-        } else if (m_alarm.enabled) {
-            lcd.printf("Alarm      %02i:%02i", m_alarm.hour, m_alarm.minute);
-        } else {
-            lcd.printf("Alarm OFF");
-        }
+        if (m_alarmData.snoozed)
+            lcd.printf("Alarm (S)  %02i:%02i", m_alarmData.hour, m_alarmData.minute);
+        else if (m_alarmData.active)
+            lcd.printf("Alarm (A)  %02i:%02i", m_alarmData.hour, m_alarmData.minute);
+        else if (m_alarmData.enabled)
+            lcd.printf("Alarm      %02i:%02i", m_alarmData.hour, m_alarmData.minute);
+        else 
+            lcd.printf("%-16s", "Alarm OFF");
     }
 }
 
@@ -161,11 +160,11 @@ void Display::m_displayWeather() {
     lcd.clear();
     lcd.setCursor(0,0);
     
-    // m_weather.mutex.lock();
+     m_weather.mutex.lock();
     lcd.printf("%s", m_weather.description.c_str());
     lcd.setCursor(0, 1);
     lcd.printf("%.1f degrees C", m_weather.temp);
-    // m_weather.mutex.unlock();
+     m_weather.mutex.unlock();
 }
 
 void Display::m_displayNews() {

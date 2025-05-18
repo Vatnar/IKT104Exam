@@ -2,7 +2,7 @@
 #include <ctime>
 #include "Logger.h"
 
-constexpr bool LOG_ENABLED = true;
+constexpr bool LOG_ENABLED = false;
 
 #define LOG(fmt, ...) LOG_IF(LOG_ENABLED, fmt, ##__VA_ARGS__)
 #define LINE() LINE_IF(LOG_ENABLED)

@@ -36,6 +36,7 @@ private:
     void alarmDown();
     void alarmLeft();
     void alarmRight();
+    void toggleAlarm();
     
     State m_state;
     Display m_display;
