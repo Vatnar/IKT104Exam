@@ -164,25 +164,6 @@ Program::Program()
             default:
             break;
         }
-
-        } else {
-            LOG("NO INPUT");
-        }
-
-        m_alarmData.mutex.lock();
-        if (m_alarmData.snoozed){            
-            m_alarm.snooze();
-            m_alarm.m_buzzer.write(0);
-            m_alarmData.mutex.unlock();
-            return;
-        }
-        if (!m_alarmData.active){
-            LOG("TURNED OFF");
-            m_alarm.m_buzzer.write(0);
-            m_alarmData.mutex.unlock();
-            return;
-        }
-        m_alarmData.mutex.unlock();
     }
 
     int Program::ProgramLoop() {
@@ -234,7 +215,6 @@ Program::Program()
     void Program::startup() { m_state = State::SHOWALARM; }
 
 void Program::showalarm(){
-    LOG("STATE: SHOW ALARM\n");
     
     ButtonState buttonState = waitForSingleButtonPress();
     switch(buttonState){
@@ -246,7 +226,6 @@ void Program::showalarm(){
 }
 
 void Program::editenabled(){
-    LOG("STATE: EDITENABLED\n");
 
         ButtonState buttonState = waitForSingleButtonPress();
 
@@ -259,7 +238,6 @@ void Program::editenabled(){
 }
 
 void Program::editAlarm() {
-    LOG("STATE: EDITALARM");
 
     if (!m_editAlarm.editing) {
         m_editAlarm.editing = true;
