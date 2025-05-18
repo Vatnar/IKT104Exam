@@ -31,8 +31,8 @@ constexpr uint32_t ANYSTATE =
     static_cast<uint32_t>(State::NEWS);
 
 
-constexpr uint32_t ANYBUTTONSTATE =
-    static_cast<uint32_t>(ButtonState::LEFT) |
-    static_cast<uint32_t>(ButtonState::UP) |
-    static_cast<uint32_t>(ButtonState::DOWN) |
-    static_cast<uint32_t>(ButtonState::RIGHT);
+constexpr uint32_t ANYBUTTONSTATE = static_cast<uint32_t>(ButtonState::LEFT) |
+                                    static_cast<uint32_t>(ButtonState::UP) |
+                                    static_cast<uint32_t>(ButtonState::DOWN) |
+                                    static_cast<uint32_t>(ButtonState::RIGHT) |
+                                    static_cast<uint32_t>(ButtonState::DOWN);

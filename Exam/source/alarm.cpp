@@ -24,7 +24,7 @@ Alarm::Alarm(AlarmData& alarmData, Timeout &alarm,Timeout &autoMute, Datetime &d
 
 void Alarm::scheduleNextAlarm() {
     if (!m_alarmData.enabled) {
-        LOG("Alarm disabled\n");
+        // LOG("Alarm disabled\n");
         return;
     }
 
@@ -42,6 +42,9 @@ void Alarm::scheduleNextAlarm() {
     double diff = difftime(alarm_epoch, current_time);
     if (diff <= 0) diff += 24 * 3600;
 
+
+    // TODO REMOVE THIS
+    diff = 500;
     // Convert diff seconds to chrono duration
     auto delay = duration<double>(diff);
 
@@ -49,11 +52,13 @@ void Alarm::scheduleNextAlarm() {
 
     // If m_alarmTimeout.attach expects a duration in seconds or milliseconds,
     // convert accordingly. Example assumes attach takes seconds as float:
+    m_alarm.detach();
     m_alarm.attach(callback(this, &Alarm::triggerAlarmCB), delay.count());
 }
 
 void Alarm::snooze(){
-    auto delay = 5s;
+  auto delay = 5s;
+    m_alarm.detach();
     m_alarm.attach(callback( this, &Alarm::triggerAlarmCB), delay.count());
 }
 
@@ -65,20 +70,20 @@ void Alarm::triggerAlarmCB() {
     m_alarmData.snoozed = false;    
     
     // Start buzzer
-    m_buzzer.period(0.001);
+    m_buzzer.period(0.01);
     m_buzzer.write(0.9);    
 }
 
-void Alarm::startAutoMute(){
-    auto delay = 10min;
+void Alarm::startAutoMute() {
+  m_alarmData.automute = true;
+  auto delay = 10s;
+  m_autoMute.detach();
     m_autoMute.attach(callback(this, &Alarm::autoMuteCB), delay.count());
 }
 // Intern: auto-mute etter utløpstid
 void Alarm::autoMuteCB() {
     
     m_alarmData.active = false;
-    
     m_buzzer.write(0.0f);
         
-    scheduleNextAlarm();
 }

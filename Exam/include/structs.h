@@ -40,6 +40,7 @@ struct AlarmData {
     int hour;
     int minute;
     bool enabled;
+    bool automute;
     bool active;
     bool snoozed;
 } __attribute__((aligned(16)));

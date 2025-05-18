@@ -20,10 +20,10 @@ Display::Display(TempHumid & tempHumid, Location & coordinate,
         lcd.display();
     }
     void Display::SetThreadPointer(std::unique_ptr<Thread> thread) {
+      m_threadPtrMutex.lock();
       m_threadPtr = nullptr;
-      LOG("SET NULLPTR");
       m_threadPtr = std::move(thread);
-      LOG("SET VARIABLE");
+      m_threadPtrMutex.unlock();
 }
 void Display::EventLoop() {
     State state = State::STARTUP;                // Instansierer State-klassen
@@ -42,27 +42,28 @@ void Display::EventLoop() {
             LOG("[Error] Multiple or zero flags set: 0x%08x\n", (uint32_t)flags);
             continue;
         }
-
+        m_threadPtrMutex.lock();
         if (m_threadPtr) {
             LOG("[DEBUG] Stopping existing thread due to state change");
-            m_threadPtr->flags_set(FLAG_STOP);
-            m_threadPtr->join();
+            // m_threadPtr->flags_set(FLAG_STOP);
+            // m_threadPtr->join();
             m_threadPtr.reset();
         }
+        m_threadPtrMutex.unlock();
 
-state = static_cast<State>(flags);
-switch (state) {
-            case State::STARTUP:        m_displayStartup();     break;
-            case State::SHOWALARM:      m_displayAlarm();       break;
-            //TODO tror datetime skal vises konstant på toppen - Peter
-            // case State::DATETIME:       m_displayDateTime();    break;
-            case State::EDITENABLED:    m_editEnabled();        break;
-            case State::TEMPHUMID:      m_displayTempHum();     break;
-            case State::WEATHER:        m_displayWeather();     break;
-            case State::NEWS:           m_displayNews();        break;
-            case State::EDITHOUR:       m_editHour();           break;
-            case State::EDITMINUTE:     m_editMinute();         break;
-            case State::SETLOC:         m_setLocation();        break;
+    state = static_cast<State>(flags);
+    switch (state) {
+                case State::STARTUP:        m_displayStartup();     break;
+                case State::SHOWALARM:      m_displayAlarm();       break;
+                //TODO tror datetime skal vises konstant på toppen - Peter
+                // case State::DATETIME:       m_displayDateTime();    break;
+                case State::EDITENABLED:    m_editEnabled();        break;
+                case State::TEMPHUMID:      m_displayTempHum();     break;
+                case State::WEATHER:        m_displayWeather();     break;
+                case State::NEWS:           m_displayNews();        break;
+                case State::EDITHOUR:       m_editHour();           break;
+                case State::EDITMINUTE:     m_editMinute();         break;
+                case State::SETLOC:         m_setLocation();        break;
         }
     }
 }
@@ -76,9 +77,9 @@ void Display::m_displayStartup() {
     lcd.setCursor(0, 1);
   // Må vente på at startuppen er ferdig først
 
-    m_datetime.mutex.lock();
+    // m_datetime.mutex.lock();
     lcd.printf("%d", m_datetime.timestamp);
-    m_datetime.mutex.unlock();
+    // m_datetime.mutex.unlock();
 
     // Dette må synkroniseres med API-en er ikke noe vits med unødvendig downtime, 
     ThisThread::sleep_for(2s);
@@ -86,11 +87,11 @@ void Display::m_displayStartup() {
     // Latitude longitude
     lcd.clear();
     lcd.setCursor(0, 0);
-    m_location.mutex.lock();
+    // m_location.mutex.lock();
     lcd.printf("Lat: %f", m_location.latitude);
     lcd.setCursor(0, 1);
     lcd.printf("Lon:  %f", m_location.longitude);
-    m_location.mutex.unlock();
+    // m_location.mutex.unlock();
     
     ThisThread::sleep_for(2s);
 
@@ -124,8 +125,7 @@ void Display::m_displayTempHum() {
     LOG("[DEBUG] DISPLAYING TEMPHUM");
     lcd.clear();
     lcd.setCursor(0,0);
-
-    ThisThread::sleep_for(1s);
+    m_threadPtrMutex.lock();
     if (m_threadPtr) {
         if (m_threadPtr->get_state() != Thread::Deleted) {
             LOG("[DEBUG] Joining sensor thread in Display");
@@ -137,11 +137,11 @@ void Display::m_displayTempHum() {
     } else {
         LOG("[DEBUG] No sensor thread to join in Display");
     }
-
-    m_tempHumid.mutex.lock(); // Lås mutex for å lese sikkert
+    m_threadPtrMutex.unlock();
+    // m_tempHumid.mutex.lock(); // Lås mutex for å lese sikkert
     float temp = m_tempHumid.temp;
     float humid = m_tempHumid.humid;
-    m_tempHumid.mutex.unlock();
+    // m_tempHumid.mutex.unlock();
 
     lcd.printf("Temp: %.1f C", temp);
     lcd.setCursor(0, 1);
@@ -152,11 +152,11 @@ void Display::m_displayWeather() {
     lcd.clear();
     lcd.setCursor(0,0);
     
-    m_weather.mutex.lock();
+    // m_weather.mutex.lock();
     lcd.printf("%s", m_weather.description.c_str());
     lcd.setCursor(0, 1);
     lcd.printf("%.1f degrees C", m_weather.temp);
-    m_weather.mutex.unlock();
+    // m_weather.mutex.unlock();
 }
 
 void Display::m_displayNews() {

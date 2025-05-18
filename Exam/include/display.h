@@ -31,7 +31,7 @@ private:
 
 
     std::unique_ptr<Thread> m_threadPtr; // Needed to move ownership
-
+    Mutex m_threadPtrMutex;
     TempHumid &m_tempHumid;
     Location &m_location;
     Datetime &m_datetime;

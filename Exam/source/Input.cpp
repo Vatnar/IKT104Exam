@@ -3,50 +3,54 @@
 #include <mbed.h>
 #include "Logger.h"
 
-constexpr bool LOG_ENABLED = true;
 
-#define LOG(fmt, ...) LOG_IF(LOG_ENABLED, fmt, ##__VA_ARGS__)
+
+ constexpr bool LOG_ENABLED = false;
+
+    #define LOG(fmt, ...) LOG_IF(LOG_ENABLED, fmt, ##__VA_ARGS__)
+    #define LINE() LINE_IF(LOG_ENABLED)
+
 
 #define FLAG 0xFFFFFFFF
 Input::Input(): m_left(D0, PullUp), m_up(D2, PullUp), m_down(D3, PullUp), m_right(D4, PullUp) {
-    LOG("INPUT: Assigned port and pullup for buttons\n");
 }
 void Input::Init(osThreadId_t programThreadId){
     m_programThreadId = programThreadId;
 }
 void Input::InputLoop() {
-    while (true) {
-        if (!m_left.read()) {
-            LOG("LEFT\n");
+  while (true) {
+    if (!m_left.read()) {
+            osThreadFlagsClear(ANYBUTTONSTATE);
             auto result = osThreadFlagsSet(m_programThreadId, uint32_t(ButtonState::LEFT));
-            if (int32_t(result) < 0) {
-                LOG("Error setting LEFT flag: 0x%08X\n", result);
-            }
             ThisThread::sleep_for(200ms);
+            continue;
+
         }
         if (!m_up.read()) {
-            LOG("UP\n");
+            osThreadFlagsClear(ANYBUTTONSTATE);
             auto result = osThreadFlagsSet(m_programThreadId, uint32_t(ButtonState::UP));
-            if (int32_t(result) < 0) {
-                LOG("Error setting UP flag: 0x%08X\n", result);
-            }
             ThisThread::sleep_for(200ms);
+            continue;
+
         }
         if (!m_down.read()) {
-            LOG("DOWN\n");
+            osThreadFlagsClear(ANYBUTTONSTATE);
+          
             auto result = osThreadFlagsSet(m_programThreadId, uint32_t(ButtonState::DOWN));
-            if (int32_t(result) < 0) {
-                LOG("Error setting DOWN flag: 0x%08X\n", result);
-            }
             ThisThread::sleep_for(200ms);
+            continue;
+
         }
         if (!m_right.read()) {
-            LOG("RIGHT\n");
+            osThreadFlagsClear(ANYBUTTONSTATE);
+          
             auto result = osThreadFlagsSet(m_programThreadId, uint32_t(ButtonState::RIGHT));
-            if (int32_t(result) < 0) {
-                LOG("Error setting RIGHT flag: 0x%08X\n", result);
-            }
             ThisThread::sleep_for(200ms);
+            continue;
         }
+            osThreadFlagsClear(ANYBUTTONSTATE);
+
+        osThreadFlagsSet(m_programThreadId, uint32_t(ButtonState::NONE));
+        ThisThread::sleep_for(200ms);
     }
 }
